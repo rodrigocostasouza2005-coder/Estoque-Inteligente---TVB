@@ -1,0 +1,2624 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TVB — Estoque Inteligente</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:#fafafa;color:#18181b;font-size:14px;line-height:1.5;display:flex}
+  /* Sidebar */
+  .sidebar{width:230px;background:#fff;border-right:1px solid #e4e4e7;height:100vh;display:flex;flex-direction:column;position:sticky;top:0;flex-shrink:0}
+  .brand{padding:20px 18px;border-bottom:1px solid #e4e4e7;display:flex;align-items:center;gap:10px}
+  .logo-box{width:40px;height:40px;background:#fff;color:#18181b;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;border-radius:8px;letter-spacing:-0.5px;border:1px solid #e4e4e7;padding:3px;object-fit:contain}
+  .brand-name{line-height:1.1}
+  .brand-name strong{font-weight:700;font-size:15px;display:block}
+  .brand-sub{font-size:10.5px;color:#71717a;text-transform:uppercase;letter-spacing:0.8px;margin-top:2px}
+  nav{padding:12px 10px;flex:1;overflow-y:auto}
+  nav .nav-section{font-size:10px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;padding:10px 10px 6px;font-weight:600}
+  nav button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;background:transparent;color:#52525b;text-align:left;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;margin-bottom:1px;font-family:inherit}
+  nav button:hover{background:#f4f4f5;color:#18181b}
+  nav button.active{background:#18181b;color:#fff}
+  nav button .icon{width:14px;display:inline-block;text-align:center;opacity:0.7}
+  nav button.active .icon{opacity:1}
+  .sidebar-foot{padding:12px 14px;border-top:1px solid #e4e4e7;font-size:11px;color:#a1a1aa}
+  /* Main */
+  main{flex:1;min-width:0;display:flex;flex-direction:column}
+  header{background:#fff;border-bottom:1px solid #e4e4e7;padding:16px 28px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;position:sticky;top:0;z-index:10}
+  header h1{font-size:20px;font-weight:700;color:#18181b}
+  header .subtitle{font-size:12px;color:#71717a;margin-top:2px}
+  .filters{display:flex;gap:8px;flex-wrap:wrap}
+  .filters select{padding:7px 10px;border:1px solid #e4e4e7;border-radius:7px;background:#fff;font-size:12.5px;color:#3f3f46;cursor:pointer;font-family:inherit;outline:none;min-width:140px}
+  .filters select:focus{border-color:#18181b}
+  .content{padding:24px 28px;flex:1}
+  /* View system */
+  .view{display:none}
+  .view.active{display:block}
+  /* Cards */
+  .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+  .kpi{background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:14px 16px}
+  .kpi .label{font-size:10.5px;color:#71717a;text-transform:uppercase;letter-spacing:0.6px;font-weight:600}
+  .kpi .value{font-size:24px;font-weight:700;margin-top:6px;color:#18181b;line-height:1.1}
+  .kpi .hint{font-size:11px;color:#a1a1aa;margin-top:4px}
+  .kpi.ok .value{color:#059669}
+  .kpi.warn .value{color:#d97706}
+  .kpi.bad .value{color:#dc2626}
+  .kpi.info .value{color:#4f46e5}
+  /* Panel */
+  .panel{background:#fff;border:1px solid #e4e4e7;border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
+  .panel-head h3{font-size:14px;font-weight:700;color:#18181b}
+  .panel-head .muted{font-size:11.5px;color:#71717a}
+  .panel-head .actions{display:flex;gap:8px}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .grid-2-35{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:16px}
+  @media (max-width:960px){.grid-2,.grid-2-35{grid-template-columns:1fr}}
+  /* Tables */
+  .table-wrap{overflow-x:auto;border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  thead th{text-align:left;padding:10px 12px;background:#fafafa;border-bottom:1px solid #e4e4e7;color:#52525b;font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;position:sticky;top:0}
+  tbody td{padding:10px 12px;border-bottom:1px solid #f4f4f5;color:#3f3f46;vertical-align:middle}
+  tbody tr:hover td{background:#fafafa}
+  tbody tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  td.strong{font-weight:600;color:#18181b}
+  /* Pills */
+  .pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:600;letter-spacing:0.2px;border:1px solid transparent}
+  .pill.a{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+  .pill.b{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+  .pill.c{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+  .pill.ok{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+  .pill.warn{background:#fffbeb;color:#b45309;border-color:#fde68a}
+  .pill.bad{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+  .pill.neutral{background:#f4f4f5;color:#52525b;border-color:#e4e4e7}
+  .pill.best{background:#fdf4ff;color:#a21caf;border-color:#f5d0fe}
+  /* Charts */
+  .chart-wrap{position:relative;height:260px}
+  .chart-wrap.sm{height:200px}
+  .chart-wrap.lg{height:320px}
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid #e4e4e7;background:#fff;color:#3f3f46;border-radius:7px;font-size:12.5px;cursor:pointer;font-family:inherit;font-weight:500}
+  .btn:hover{background:#f4f4f5}
+  .btn.primary{background:#18181b;color:#fff;border-color:#18181b}
+  .btn.primary:hover{background:#27272a}
+  /* Upload */
+  .upload-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
+  .upload-slot{background:#fff;border:2px dashed #e4e4e7;border-radius:10px;padding:16px;cursor:pointer;transition:.15s;position:relative}
+  .upload-slot:hover{border-color:#a1a1aa;background:#fafafa}
+  .upload-slot.has-file{border-style:solid;border-color:#10b981;background:#f0fdf4}
+  .upload-slot.dragover{border-color:#18181b;background:#f4f4f5}
+  .upload-slot input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+  .upload-slot .u-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .upload-slot .u-title{font-weight:700;font-size:13px;color:#18181b}
+  .upload-slot .u-desc{font-size:11.5px;color:#71717a;margin-top:3px;line-height:1.35}
+  .upload-slot .u-status{font-size:11.5px;margin-top:8px;color:#10b981;font-weight:600}
+  .upload-slot .u-status.empty{color:#a1a1aa;font-weight:500}
+  /* Suggestion cards */
+  .sug-grid{display:grid;gap:10px}
+  .sug-card{display:flex;gap:14px;align-items:flex-start;padding:14px;background:#fff;border:1px solid #e4e4e7;border-radius:10px;border-left:4px solid #e4e4e7}
+  .sug-card.act-outlet{border-left-color:#dc2626}
+  .sug-card.act-promo{border-left-color:#d97706}
+  .sug-card.act-rep{border-left-color:#059669}
+  .sug-card.act-prod{border-left-color:#4f46e5}
+  .sug-card.act-trf{border-left-color:#8b5cf6}
+  .sug-card .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;padding:3px 8px;border-radius:999px;white-space:nowrap;align-self:flex-start}
+  .sug-card.act-outlet .badge{background:#fef2f2;color:#b91c1c}
+  .sug-card.act-promo .badge{background:#fffbeb;color:#b45309}
+  .sug-card.act-rep .badge{background:#ecfdf5;color:#047857}
+  .sug-card.act-prod .badge{background:#eef2ff;color:#4338ca}
+  .sug-card.act-trf .badge{background:#faf5ff;color:#7e22ce}
+  .sug-card .body{flex:1;min-width:0}
+  .sug-card .title{font-weight:600;color:#18181b;font-size:13.5px;margin-bottom:3px}
+  .sug-card .sub{font-size:12px;color:#71717a}
+  .sug-card .reason{margin-top:6px;font-size:12px;color:#3f3f46;background:#fafafa;padding:6px 10px;border-radius:6px;border-left:2px solid #e4e4e7}
+  /* Intro banner */
+  .intro{background:linear-gradient(135deg,#18181b,#27272a);color:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .intro h2{font-size:17px;font-weight:700;margin-bottom:4px}
+  .intro p{font-size:13px;opacity:0.85;max-width:620px}
+  .intro .actions{display:flex;gap:8px;flex-shrink:0}
+  .intro .btn{background:transparent;border-color:rgba(255,255,255,0.25);color:#fff}
+  .intro .btn:hover{background:rgba(255,255,255,0.1)}
+  .intro .btn.primary{background:#fff;color:#18181b;border-color:#fff}
+  .empty{padding:40px 20px;text-align:center;color:#a1a1aa;font-size:13px}
+  /* Search */
+  .search{position:relative}
+  .search input{padding:6px 10px 6px 28px;border:1px solid #e4e4e7;border-radius:7px;font-size:12.5px;font-family:inherit;outline:none;width:220px}
+  .search input:focus{border-color:#18181b}
+  .search::before{content:"";position:absolute;left:10px;top:50%;transform:translateY(-50%);width:10px;height:10px;border:1.5px solid #a1a1aa;border-radius:50%}
+  /* Toast */
+  .toast{position:fixed;bottom:20px;right:20px;background:#18181b;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:1000;box-shadow:0 10px 30px rgba(0,0,0,0.15);opacity:0;transform:translateY(10px);transition:.2s}
+  .toast.show{opacity:1;transform:translateY(0)}
+  .toast.err{background:#dc2626}
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#d4d4d8;border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  /* Tabelas ordenáveis */
+  table.sortable thead th[data-sort]{user-select:none}
+  table.sortable thead th[data-sort]:hover{background:#f4f4f5}
+  tbody tr[data-sku]:hover{background:#f4f4f5}
+  /* Drawer de detalhe do SKU */
+  #sku-drawer{position:fixed;top:0;left:0;right:0;bottom:0;z-index:500;pointer-events:none}
+  #sku-drawer .sku-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0);transition:background .2s;pointer-events:none}
+  #sku-drawer.open .sku-backdrop{background:rgba(0,0,0,0.35);pointer-events:auto}
+  #sku-drawer .sku-panel{position:absolute;top:0;right:0;bottom:0;width:min(520px,94vw);background:#fff;box-shadow:-10px 0 30px rgba(0,0,0,0.12);transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);overflow-y:auto;pointer-events:auto;padding:24px 26px}
+  #sku-drawer.open .sku-panel{transform:translateX(0)}
+  .sku-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e4e4e7}
+  .sku-close{background:transparent;border:0;font-size:24px;line-height:1;color:#71717a;cursor:pointer;padding:2px 8px;border-radius:6px}
+  .sku-close:hover{background:#f4f4f5;color:#18181b}
+  .sku-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+  .sku-kpi{background:#fafafa;border:1px solid #f4f4f5;border-radius:8px;padding:10px 12px}
+  .sku-kpi span{display:block;font-size:10.5px;color:#71717a;text-transform:uppercase;letter-spacing:0.5px;font-weight:600}
+  .sku-kpi strong{display:block;font-size:17px;font-weight:700;margin-top:4px;color:#18181b}
+  .sku-section{margin-bottom:20px}
+  .sku-section h3{font-size:12px;text-transform:uppercase;letter-spacing:0.8px;color:#52525b;font-weight:700;margin-bottom:10px}
+  .sku-section table{font-size:12.5px}
+  .sku-section table thead th{background:#fafafa}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="brand">
+    <img class="logo-box" src="data:image/png;base64,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" alt="TVB" style="object-fit:contain;background:#18181b;padding:4px">
+    <div class="brand-name">
+      <strong>TVB</strong>
+      <div class="brand-sub">Estoque Inteligente</div>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-section">Análise</div>
+    <button data-view="overview" class="active"><span class="icon">◐</span>Visão Geral</button>
+    <button data-view="giro"><span class="icon">↻</span>Giro de Estoque</button>
+    <button data-view="cobertura"><span class="icon">◧</span>Cobertura</button>
+    <button data-view="sellthrough"><span class="icon">≋</span>Sell-through</button>
+    <button data-view="abc"><span class="icon">▤</span>Curva ABC</button>
+    <button data-view="envelhecimento"><span class="icon">⧗</span>Envelhecimento</button>
+    <button data-view="ruptura"><span class="icon">⚠</span>Ruptura</button>
+    <div class="nav-section">Decisão</div>
+    <button data-view="sugestoes"><span class="icon">✦</span>Sugestões</button>
+    <div class="nav-section">Contexto</div>
+    <button data-view="historico"><span class="icon">⌚</span>Histórico 2025</button>
+    <div class="nav-section">Configuração</div>
+    <button data-view="regras"><span class="icon">⚙</span>Regras</button>
+    <button data-view="dados"><span class="icon">⌺</span>Dados</button>
+  </nav>
+  <div class="sidebar-foot" id="foot-status">Sem dados carregados</div>
+</aside>
+
+<main>
+  <header>
+    <div>
+      <h1 id="view-title">Visão Geral</h1>
+      <div class="subtitle" id="view-sub">Panorama do estoque e vendas</div>
+    </div>
+    <div class="filters">
+      <select id="filter-periodo" title="Janela de análise">
+        <option value="30">Últimos 30 dias</option>
+        <option value="60" selected>Últimos 60 dias</option>
+        <option value="90">Últimos 90 dias</option>
+        <option value="180">Últimos 180 dias</option>
+        <option value="all">Todo o período</option>
+      </select>
+      <select id="filter-empresa"><option value="all">Todas as empresas</option></select>
+      <select id="filter-grupo"><option value="all">Todas as categorias</option></select>
+      <select id="filter-tamanho"><option value="all">Todos os tamanhos</option></select>
+      <select id="filter-armazenador"><option value="all">Todos os locais</option></select>
+    </div>
+  </header>
+  <div class="content" id="content"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+ * TVB ESTOQUE INTELIGENTE
+ * Regras de negócio co-definidas com Rodrigo (TVB, streetwear).
+ * Todas as regras ficam em State.rules e são editáveis na aba "Regras".
+ * ============================================================ */
+
+const DEFAULT_RULES = {
+  janelaPadrao: 60,          // dias (pode ser trocado no header)
+  // TVB usa 50/30/20 (A = 50% da receita, B = 30%, C = 20% resto).
+  // Os campos são os CORTES ACUMULADOS: abcA=50 significa "A vai até 50% acumulado"
+  abcA: 50, abcB: 80,        // A ≤ 50% acumulado; B 50-80%; C 80-100%
+  abcNivel: 'referencia',    // nível da ABC: 'referencia' | 'codVendas' | 'barcode'
+  envAlerta: 60,             // dias sem venda -> ALERTA
+  envPromo: 90,              // dias sem venda -> PROMOÇÃO
+  envQueima: 120,            // dias sem venda -> QUEIMA/OUTLET
+  rupturaDiasVenda: 30,      // estoque 0 + vendeu em <= X dias = ruptura real
+  cobBaixa: 30,              // cobertura < X dias = baixa
+  cobAlta: 60,               // cobertura > X dias = excessiva
+  giroAlto: 4,               // giro anualizado >= X = alto
+  giroBaixo: 1,              // giro anualizado <= X = baixo
+  reabCobertura: 30,         // reabastecer quando cobertura < X
+  reabGiroMin: 4,            // ...E giro alto (>=)
+  sugestaoTransfAtiva: false // transferência entre lojas desativada por enquanto
+};
+
+const State = {
+  raw: { estoque: [], vendas: [], produtos: [], ordens: [], devolucoes: [], historico: [] },
+  files: { estoque: null, produtos: null, ordens: null, devolucoes: null, vendas: [], historico: [] },
+  items: [],          // array unificado (um item por cod+tamanho+empresa+armazenador)
+  produtos: [],       // catalog unificado por cod+tamanho
+  rules: { ...DEFAULT_RULES },
+  filters: { periodo: 60, empresa: 'all', grupo: 'all', tamanho: 'all', armazenador: 'all' },
+  currentView: 'overview',
+  dataRefDate: null   // data do snapshot de estoque
+};
+
+const charts = {};
+
+/* ---------- Utils ---------- */
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => [...r.querySelectorAll(s)];
+const fmtBRL = v => (v==null||isNaN(v)) ? '—' : v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+const fmtNum = (v, d=0) => (v==null||isNaN(v)) ? '—' : v.toLocaleString('pt-BR',{maximumFractionDigits:d});
+const fmtPct = v => (v==null||isNaN(v)) ? '—' : (v*100).toLocaleString('pt-BR',{maximumFractionDigits:0})+'%';
+const toDate = v => {
+  if (!v) return null;
+  if (v instanceof Date) return v;
+  if (typeof v === 'number') { // Excel serial
+    const d = new Date(Math.round((v - 25569) * 86400 * 1000));
+    return isNaN(d) ? null : d;
+  }
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+};
+const diffDays = (a, b) => a && b ? Math.floor((a - b) / 86400000) : null;
+const daysAgo = (d, ref) => diffDays(ref || State.dataRefDate || new Date(), d);
+const sum = (arr, fn) => arr.reduce((a,x) => a + (fn ? fn(x) : x) || 0, 0);
+const toast = (msg, err=false) => {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (err?' err':'');
+  setTimeout(() => t.classList.remove('show'), 2800);
+};
+/* Normalize: trim + collapse spaces + lowercase for fuzzy compare */
+const norm = s => (s==null?'':String(s)).trim();
+const key = s => norm(s).toLowerCase().replace(/\s+/g,' ');
+
+/* Chart helper: destroy before recreate (Chart.js needs this) */
+function chart(id, config) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el, config);
+}
+
+/* ============================================================
+ * PARSING — lê arquivos Excel usando SheetJS e normaliza para
+ * os nomes de colunas que esperamos (vem direto do PowerBI da TVB).
+ * Cada tipo (estoque/vendas/produtos/ordens) tem seu parser.
+ * ============================================================ */
+function sheetNameLike(wb, candidates) {
+  const names = wb.SheetNames;
+  for (const c of candidates) {
+    const hit = names.find(n => key(n) === key(c));
+    if (hit) return hit;
+  }
+  // fallback: primeiro sheet
+  return names[0];
+}
+
+function parseSheet(wb, candidates) {
+  const name = sheetNameLike(wb, candidates);
+  const ws = wb.Sheets[name];
+  return XLSX.utils.sheet_to_json(ws, { raw: true, defval: null });
+}
+
+async function readFile(file) {
+  const buf = await file.arrayBuffer();
+  return XLSX.read(buf, { type: 'array', cellDates: true });
+}
+
+async function parseEstoque(file) {
+  const wb = await readFile(file);
+  const rows = parseSheet(wb, ['ESTOQUE','Estoque']);
+  return rows.map(r => ({
+    empresa: norm(r['Empresa']),
+    grupo: norm(r['Grupo (produto acabado)']),
+    produto: norm(r['Nome do produto']),
+    cor: norm(r['Cor']),
+    tamanho: norm(r['Tamanho']),
+    qty: +r['Quantidade total disponível'] || 0,
+    armazenador: norm(r['Armazenador']),
+    barcode: norm(r['Código de barras interno']),
+    data: toDate(r['DATA'])
+  })).filter(r => r.barcode);
+}
+
+async function parseVendas(file) {
+  const wb = await readFile(file);
+  const rows = parseSheet(wb, ['VENDAS','Vendas']);
+  return rows.map(r => ({
+    empresa: norm(r['Fantasia (Empresa)']),
+    produto: norm(r['Produto']),
+    cor: norm(r['Cor']),
+    tamanho: norm(r['Tamanho']),
+    valor: +r['Valor total líquido'] || 0,
+    data: toDate(r['Data da venda']),
+    cliente: norm(r['Razão social (Cliente)']),
+    qty: +r['Quantidade'] || 0,
+    custo: +r['Valor de custo total'] || 0,
+    grupo: norm(r['Grupo de produto']),
+    tabelaPreco: norm(r['Tabela de preço']),
+    vendedor: norm(r['Vendedor']),
+    cod: norm(r['cod']),
+    cidade: norm(r['Cidade']),
+    estado: norm(r['Estado']),
+    marca: norm(r['Marca'])
+  })).filter(r => r.cod && r.data);
+}
+
+async function parseProdutos(file) {
+  const wb = await readFile(file);
+  const rows = parseSheet(wb, ['Produtos','PRODUTOS']);
+  return rows.map(r => ({
+    barcode: norm(r['Código de barras interno']),
+    grupo: norm(r['Grupo (produto acabado)']),
+    referencia: norm(r['Referência']),
+    produto: norm(r['Nome do produto']),
+    cor: norm(r['Cor']),
+    tamanho: norm(r['Tamanho']),
+    codVendas: norm(r['cod vendas']),
+    bestseller: norm(r['best']).toUpperCase() === 'BESTSELLER'
+  })).filter(r => r.barcode);
+}
+
+async function parseOrdens(file) {
+  const wb = await readFile(file);
+  const rows = parseSheet(wb, ['ORDEM DE PRODUÇÃO','Ordem de produção','ORDEM']);
+  return rows.map(r => ({
+    grupo: norm(r['Grupo de produto acabado']),
+    referencia: norm(r['Referência']),
+    produto: norm(r['Produto']),
+    tamanho: norm(r['Tamanho']),
+    qty: +r['Quantidade finalizada'] || 0,
+    data: toDate(r['Data de previsão']),
+    ordem: norm(r['Ordem de produção']),
+    cod: norm(r['COD'])
+  })).filter(r => r.cod);
+}
+
+async function parseDevolucoes(file) {
+  const wb = await readFile(file);
+  // aceita variações com/sem espaços no nome da aba
+  const rows = parseSheet(wb, ['DEVOLUÇÃO','DEVOLUÇÃO ','DEVOLUCAO','Devoluções','Devolucoes']);
+  return rows.map(r => ({
+    data: toDate(r['Data da devolução']),
+    produto: norm(r['Produto']),
+    cor: norm(r['Cor']),
+    tamanho: norm(r['Tamanho']),
+    qty: +r['Quantidade'] || 0,
+    valor: +r['Valor total'] || 0,
+    armazenador: norm(r['Armazenador']),
+    grupo: norm(r['Grupo de produto']),
+    cod: norm(r['Cod ']) || norm(r['Cod']) || norm(r['cod'])
+  })).filter(r => r.cod);
+}
+
+/* Parser para relatórios históricos agregados por família/mês (Leblon e Rio Sul 2025).
+   Esses arquivos vêm do PowerBI com título + filtros no topo — precisa detectar a linha do cabeçalho. */
+async function parseHistoricoFamilia(file, lojaPadrao) {
+  const wb = await readFile(file);
+  const sheetName = wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  // Ler como matriz para encontrar linha do header
+  const matrix = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+  let headerRow = -1;
+  for (let i = 0; i < Math.min(matrix.length, 15); i++) {
+    const row = matrix[i] || [];
+    if (row.some(c => c && String(c).includes('Família de Produto')) &&
+        row.some(c => c && String(c).includes('Quantidade'))) {
+      headerRow = i; break;
+    }
+  }
+  if (headerRow < 0) return [];
+  const headers = matrix[headerRow].map(norm);
+  const data = [];
+  let mesAtual = null;
+  for (let i = headerRow + 1; i < matrix.length; i++) {
+    const row = matrix[i];
+    if (!row || row.every(c => c == null || c === '')) continue;
+    const rec = {};
+    headers.forEach((h, j) => rec[h] = row[j]);
+    // mês pode estar vazio (PowerBI mostra só na 1a linha do grupo)
+    if (rec['Data de Emissão.Mês']) mesAtual = norm(rec['Data de Emissão.Mês']);
+    const familia = norm(rec['Família de Produto']);
+    if (!familia || familia === 'Total Geral') continue;
+    data.push({
+      loja: lojaPadrao,
+      mes: mesAtual,
+      familia,
+      receita: +rec['Total de Mercadoria'] || 0,
+      desconto: +rec['Desconto'] || 0,
+      frete: +rec['Frete'] || 0,
+      totalNF: +rec['Total da Nota Fiscal'] || 0,
+      custo: +rec['CMC Total do Movimento'] || 0,
+      quantidade: +rec['Quantidade'] || 0,
+      ticketMedio: +rec['Ticket Médio'] || 0
+    });
+  }
+  return data;
+}
+
+/* ============================================================
+ * JOIN — combina as 4 tabelas em 1 array de "items".
+ *
+ * Um ITEM é um SKU+Tamanho+Loja. Para cada item calculamos:
+ *   - estoque atual
+ *   - total produzido (soma de Ordens pro cod+tamanho)
+ *   - total vendido (qty + receita + custo)
+ *   - vendas em diferentes janelas (30/60/90/180/todo)
+ *   - dias desde última venda
+ *   - dias desde primeira venda (idade no estoque)
+ *   - bestseller flag
+ *
+ * A partir daí computamos giro, cobertura, sell-through, ABC, etc.
+ * ============================================================ */
+function computeItems() {
+  const { estoque, vendas, produtos, ordens, devolucoes } = State.raw;
+  // Data de referência: data do snapshot de estoque (ou hoje)
+  const ref = estoque.find(e => e.data)?.data || new Date();
+  State.dataRefDate = ref;
+
+  // Index produtos por barcode e por codVendas
+  const prodByBarcode = new Map();
+  const prodByCod = new Map();
+  produtos.forEach(p => {
+    if (p.barcode) prodByBarcode.set(p.barcode, p);
+    if (p.codVendas) {
+      if (!prodByCod.has(p.codVendas)) prodByCod.set(p.codVendas, []);
+      prodByCod.get(p.codVendas).push(p);
+    }
+  });
+
+  // Agregar vendas por (cod, tamanho, empresa) e (cod, tamanho) geral.
+  // Também SUBTRAI devoluções do total agregado (mas mantém datas de venda reais
+  // pra calcular "última venda" e "dias sem venda").
+  const vKey = (cod, tam, emp) => `${cod}||${tam}||${emp||'*'}`;
+  const vendasAgg = new Map();
+  const vendasTotais = new Map();
+  vendas.forEach(v => {
+    [vKey(v.cod, v.tamanho, v.empresa), vKey(v.cod, v.tamanho, null)].forEach((k, i) => {
+      if (!vendasAgg.has(k)) vendasAgg.set(k, { qty:0, receita:0, custo:0, dates:[], devQty:0, devReceita:0 });
+      const a = vendasAgg.get(k);
+      a.qty += v.qty; a.receita += v.valor; a.custo += v.custo;
+      if (v.data) a.dates.push(v.data);
+      if (i===1) vendasTotais.set(k, a);
+    });
+  });
+  // Mapeamento empresa -> armazenador (devoluções vêm com "armazenador", não "empresa")
+  const armazenadorParaEmpresa = { 'CD':'TVB Site e Atacado','Leblon':'TVB Leblon','Rio Sul':'TVB Rio Sul' };
+  devolucoes.forEach(d => {
+    const emp = armazenadorParaEmpresa[d.armazenador] || null;
+    [vKey(d.cod, d.tamanho, emp), vKey(d.cod, d.tamanho, null)].forEach(k => {
+      if (!vendasAgg.has(k)) vendasAgg.set(k, { qty:0, receita:0, custo:0, dates:[], devQty:0, devReceita:0 });
+      const a = vendasAgg.get(k);
+      a.qty -= d.qty;
+      a.receita -= d.valor;
+      a.devQty += d.qty;
+      a.devReceita += d.valor;
+    });
+  });
+
+  // Produção por (cod, tamanho)
+  const prodQty = new Map();
+  ordens.forEach(o => {
+    const k = `${o.cod}||${o.tamanho}`;
+    prodQty.set(k, (prodQty.get(k) || 0) + o.qty);
+  });
+
+  // Construir items a partir do ESTOQUE (uma linha por barcode+empresa+armazenador)
+  const items = estoque.map(e => {
+    const prod = prodByBarcode.get(e.barcode) || {};
+    const codVendas = prod.codVendas || '';
+    const kEmp = vKey(codVendas, e.tamanho, e.empresa);
+    const kAll = vKey(codVendas, e.tamanho, null);
+    const va = vendasAgg.get(kEmp) || { qty:0, receita:0, custo:0, dates:[] };
+    const vaAll = vendasAgg.get(kAll) || { qty:0, receita:0, custo:0, dates:[] };
+    const prodTam = prodQty.get(`${codVendas}||${e.tamanho}`) || 0;
+
+    // Janelas de tempo — datas já ordenadas
+    const allDates = va.dates.sort((a,b) => a - b);
+    const lastSale = allDates[allDates.length-1] || null;
+    const firstSale = allDates[0] || null;
+    const diasSemVenda = lastSale ? daysAgo(lastSale, ref) : null;
+    const diasDesdePrimeira = firstSale ? daysAgo(firstSale, ref) : null;
+
+    // Vendas em janelas específicas (para a loja) — subtrai devoluções
+    const vendasJanela = dias => {
+      if (dias === 'all') return { qty: va.qty, receita: va.receita, custo: va.custo };
+      const cutoff = new Date(ref); cutoff.setDate(cutoff.getDate() - dias);
+      let qty=0, rec=0, cus=0;
+      vendas.forEach(v => {
+        if (v.cod !== codVendas || v.tamanho !== e.tamanho) return;
+        if (v.empresa !== e.empresa) return;
+        if (v.data < cutoff) return;
+        qty += v.qty; rec += v.valor; cus += v.custo;
+      });
+      // subtrai devoluções da mesma janela
+      devolucoes.forEach(d => {
+        if (d.cod !== codVendas || d.tamanho !== e.tamanho) return;
+        const emp = armazenadorParaEmpresa[d.armazenador];
+        if (emp !== e.empresa) return;
+        if (!d.data || d.data < cutoff) return;
+        qty -= d.qty; rec -= d.valor;
+      });
+      return { qty: Math.max(0, qty), receita: Math.max(0, rec), custo: cus };
+    };
+
+    return {
+      // identidade
+      barcode: e.barcode,
+      codVendas,
+      referencia: prod.referencia || '',
+      produto: e.produto || prod.produto || '',
+      cor: e.cor || prod.cor || '',
+      tamanho: e.tamanho,
+      grupo: e.grupo || prod.grupo || '',
+      empresa: e.empresa,
+      armazenador: e.armazenador,
+      bestseller: !!prod.bestseller,
+      // estoque
+      estoque: e.qty,
+      // produção (por cod+tamanho, total da rede)
+      produzido: prodTam,
+      // vendas (para esta loja) — já líquidas de devoluções
+      vendasQty: va.qty,
+      receita: va.receita,
+      custo: va.custo,
+      devQty: va.devQty || 0,
+      devReceita: va.devReceita || 0,
+      vendasTotalQty: vaAll.qty,    // total da rede
+      receitaTotal: vaAll.receita,  // total da rede
+      lastSale, firstSale, diasSemVenda, diasDesdePrimeira,
+      // função dinâmica — recalcula ao trocar a janela
+      _vendasJanela: vendasJanela
+    };
+  });
+
+  State.items = items;
+}
+
+/* ---------- Filtros ---------- */
+function getFilteredItems() {
+  const f = State.filters;
+  return State.items.filter(it => {
+    if (f.empresa !== 'all' && it.empresa !== f.empresa) return false;
+    if (f.grupo !== 'all' && it.grupo !== f.grupo) return false;
+    if (f.tamanho !== 'all' && it.tamanho !== f.tamanho) return false;
+    if (f.armazenador !== 'all' && it.armazenador !== f.armazenador) return false;
+    return true;
+  });
+}
+
+/* ---------- Métricas por item (dependem da janela) ---------- */
+function enrich(items, janela) {
+  const dias = janela === 'all' ? 365 : janela; // para anualizar
+  return items.map(it => {
+    const vj = it._vendasJanela(janela);
+    const vendasPeriodo = vj.qty;
+    const receitaPeriodo = vj.receita;
+    // giro anualizado = (vendas no periodo * 365/dias) / estoque_atual
+    const giro = it.estoque > 0 ? (vendasPeriodo * (365 / dias)) / it.estoque : null;
+    // cobertura = estoque / (vendas/dia)
+    const vendasDia = vendasPeriodo / dias;
+    const cobertura = vendasDia > 0 ? it.estoque / vendasDia : (it.estoque > 0 ? Infinity : null);
+    // sell-through: vendido / produzido (rede inteira, não por loja — produção é global)
+    const sellThrough = it.produzido > 0 ? it.vendasTotalQty / it.produzido : null;
+    // envelhecimento = dias sem venda
+    const idade = it.diasSemVenda;
+    // ruptura: estoque 0 + vendeu nos últimos N dias
+    const ruptura = it.estoque === 0 && idade != null && idade <= State.rules.rupturaDiasVenda;
+    return { ...it, vendasPeriodo, receitaPeriodo, giro, cobertura, sellThrough, ruptura };
+  });
+}
+
+/* ---------- Classificações (usam as regras) ---------- */
+function classifyEnvelhecimento(idade) {
+  const r = State.rules;
+  if (idade == null) return 'sem-venda';
+  if (idade >= r.envQueima) return 'queima';
+  if (idade >= r.envPromo) return 'promo';
+  if (idade >= r.envAlerta) return 'alerta';
+  return 'ok';
+}
+function classifyCobertura(cob) {
+  const r = State.rules;
+  if (cob == null) return 'sem-dados';
+  if (cob === Infinity) return 'sem-venda';
+  if (cob < r.cobBaixa) return 'baixa';
+  if (cob > r.cobAlta) return 'excessiva';
+  return 'ok';
+}
+function classifyGiro(g) {
+  const r = State.rules;
+  if (g == null) return 'sem-dados';
+  if (g >= r.giroAlto) return 'alto';
+  if (g <= r.giroBaixo) return 'baixo';
+  return 'medio';
+}
+function classifyABC(enriched) {
+  // classifica por receita no período, acumulado.
+  // Cada item já deve estar agregado no nível desejado (barcode/codVendas/referencia).
+  // Chaveia pelo campo `_key` se existir (setado pela consolidação), senão por barcode.
+  const keyOf = it => it._key || it.barcode;
+  const sorted = [...enriched].sort((a,b) => (b.receitaPeriodo||0) - (a.receitaPeriodo||0));
+  const total = sum(sorted, x => x.receitaPeriodo || 0) || 1;
+  let acc = 0;
+  const r = State.rules;
+  const map = new Map();
+  sorted.forEach(it => {
+    acc += it.receitaPeriodo || 0;
+    const pct = (acc / total) * 100;
+    let cls = 'C';
+    if (pct <= r.abcA) cls = 'A';
+    else if (pct <= r.abcB) cls = 'B';
+    map.set(keyOf(it), cls);
+  });
+  return enriched.map(it => ({ ...it, abc: map.get(keyOf(it)) || 'C' }));
+}
+
+/* ============================================================
+ * CONSOLIDAÇÃO — agrega items em diferentes níveis:
+ *   'loja'       → um por (barcode, empresa, armazenador) (default bruto)
+ *   'barcode'    → um por barcode (SKU), somando estoque das 3 lojas
+ *   'codVendas'  → um por (cod vendas = modelo+cor), somando tamanhos e lojas
+ *   'referencia' → um por referência (modelo), somando tudo
+ *
+ * Quando há filtro de empresa ativo (≠ 'all'), a consolidação é feita só
+ * dentro daquela empresa (mas continua agregando as demais dimensões).
+ * ============================================================ */
+function consolidate(items, level) {
+  if (level === 'loja' || !level) return items;
+
+  const empresaFiltrada = State.filters.empresa !== 'all';
+
+  // agregador genérico — recebe função de chave e de label
+  const agg = (keyFn, labelFn) => {
+    const groups = new Map();
+    items.forEach(it => {
+      const k = keyFn(it);
+      if (!k) return;
+      if (!groups.has(k)) {
+        groups.set(k, {
+          _key: k,
+          referencia: it.referencia,
+          produto: it.produto,
+          cor: it.cor,
+          tamanho: it.tamanho,
+          grupo: it.grupo,
+          codVendas: it.codVendas,
+          barcode: it.barcode,
+          empresa: empresaFiltrada ? it.empresa : 'Rede consolidada',
+          armazenador: empresaFiltrada ? it.armazenador : 'Rede',
+          estoque: 0,
+          estoquePorLoja: {},
+          produzido: 0,
+          vendasQty: 0,
+          receita: 0,
+          custo: 0,
+          devQty: 0,
+          devReceita: 0,
+          // usado por enrich — soma vendas por janela direto das linhas de origem
+          _sourceItems: [],
+          _cores: new Set(),
+          _tamanhos: new Set(),
+          _barcodes: new Set(),
+          lastSale: null,
+          firstSale: null,
+          bestseller: false,
+          _label: labelFn ? labelFn(it) : ''
+        });
+      }
+      const g = groups.get(k);
+      g.estoque += (it.estoque || 0);
+      if (it.armazenador) {
+        g.estoquePorLoja[it.armazenador] = (g.estoquePorLoja[it.armazenador]||0) + (it.estoque||0);
+      }
+      g._sourceItems.push(it);
+      if (it.cor) g._cores.add(it.cor);
+      if (it.tamanho) g._tamanhos.add(it.tamanho);
+      if (it.barcode) g._barcodes.add(it.barcode);
+      // produção e vendas-totais-da-rede são por (cod, tamanho) — preservar do primeiro item
+      // mas somar quando agregamos por referência (vários tamanhos/cores)
+      g.bestseller = g.bestseller || !!it.bestseller;
+      if (it.lastSale && (!g.lastSale || it.lastSale > g.lastSale)) g.lastSale = it.lastSale;
+      if (it.firstSale && (!g.firstSale || it.firstSale < g.firstSale)) g.firstSale = it.firstSale;
+    });
+
+    // Pós-processamento: somar vendas/produção no nível correto, evitando dupla contagem.
+    // vendasTotalQty e produzido são por (cod, tamanho) global. Se estamos agregando por
+    // barcode (= 1 cod+tamanho), cada _sourceItems tem as 3 lojas do mesmo par → pegamos
+    // vendasTotalQty de qualquer um. Se estamos agregando por referência, precisamos somar
+    // vendasTotalQty/produzido por (cod, tamanho) único dentro do grupo.
+    groups.forEach(g => {
+      const pares = new Map(); // (cod, tamanho) → { vendasTotalQty, receitaTotal, produzido, vendasQtyEmpresa, receitaEmpresa, custoEmpresa, devQty, devReceita }
+      g._sourceItems.forEach(s => {
+        const k2 = `${s.codVendas}||${s.tamanho}`;
+        if (!pares.has(k2)) pares.set(k2, {
+          vendasTotalQty: s.vendasTotalQty || 0,
+          receitaTotal: s.receitaTotal || 0,
+          produzido: s.produzido || 0,
+          vendasQtyEmpresa: 0, receitaEmpresa: 0, custoEmpresa: 0,
+          devQty: 0, devReceita: 0
+        });
+        const p = pares.get(k2);
+        // para empresa específica, somar por linha
+        p.vendasQtyEmpresa += (s.vendasQty || 0);
+        p.receitaEmpresa += (s.receita || 0);
+        p.custoEmpresa += (s.custo || 0);
+        p.devQty += (s.devQty || 0);
+        p.devReceita += (s.devReceita || 0);
+      });
+      g.produzido = 0; g.vendasTotalQty = 0; g.receitaTotal = 0;
+      g.vendasQty = 0; g.receita = 0; g.custo = 0; g.devQty = 0; g.devReceita = 0;
+      pares.forEach(p => {
+        g.produzido += p.produzido;
+        g.vendasTotalQty += p.vendasTotalQty;
+        g.receitaTotal += p.receitaTotal;
+        // se filtrou empresa, usar vendasQtyEmpresa; senão, usar total da rede
+        if (empresaFiltrada) {
+          g.vendasQty += p.vendasQtyEmpresa;
+          g.receita += p.receitaEmpresa;
+          g.custo += p.custoEmpresa;
+          g.devQty += p.devQty;
+          g.devReceita += p.devReceita;
+        } else {
+          g.vendasQty += p.vendasTotalQty;
+          g.receita += p.receitaTotal;
+          g.custo += p.custoEmpresa;   // custo é por venda, ok somar
+          g.devQty += p.devQty;
+          g.devReceita += p.devReceita;
+        }
+      });
+      // dias sem venda consolidado
+      g.diasSemVenda = g.lastSale ? daysAgo(g.lastSale, State.dataRefDate) : null;
+      g.diasDesdePrimeira = g.firstSale ? daysAgo(g.firstSale, State.dataRefDate) : null;
+
+      // Labels amigáveis para cor/tamanho quando agregamos várias variantes
+      const cArr = [...g._cores]; const tArr = [...g._tamanhos];
+      g.corLabel = cArr.length === 0 ? '—' : cArr.length === 1 ? cArr[0] : `${cArr.length} cores`;
+      g.tamanhoLabel = tArr.length === 0 ? '—' : tArr.length === 1 ? tArr[0] : `${tArr.length} tam`;
+      g.skuCount = g._barcodes.size;
+
+      // _vendasJanela consolidado — precisa varrer fontes
+      g._vendasJanela = (dias) => {
+        if (dias === 'all') return { qty: g.vendasQty, receita: g.receita, custo: g.custo };
+        // soma das janelas nos source items (já respeita filtro de empresa se ativo)
+        let qty=0, rec=0, cus=0;
+        g._sourceItems.forEach(s => {
+          const j = s._vendasJanela ? s._vendasJanela(dias) : { qty:0, receita:0, custo:0 };
+          if (empresaFiltrada) {
+            qty += j.qty; rec += j.receita; cus += j.custo;
+          } else {
+            // quando consolidado na rede, _vendasJanela do source já é da empresa dele;
+            // mas queremos toda a rede — somamos as 3 lojas daquele par (cod, tamanho)
+            // Para evitar dupla contagem com múltiplas fontes do mesmo par, somamos pelas lojas
+            qty += j.qty; rec += j.receita; cus += j.custo;
+          }
+        });
+        return { qty, receita: rec, custo: cus };
+      };
+    });
+    return [...groups.values()];
+  };
+
+  if (level === 'barcode')     return agg(it => it.barcode, it => it.produto);
+  if (level === 'codVendas')   return agg(it => it.codVendas, it => `${it.produto} ${it.cor||''}`.trim());
+  if (level === 'referencia')  return agg(it => it.referencia || it.codVendas, it => it.referencia || it.produto);
+  return items;
+}
+
+/* Helper: pega items filtrados + consolidados no nível da view.
+   Por default consolida por barcode (um por SKU, rede inteira). */
+function viewItems(level='barcode') {
+  return consolidate(getFilteredItems(), level);
+}
+
+/* ============================================================
+ * RENDERIZAÇÃO — cada "view" tem sua própria função.
+ * O dispatcher `render()` chama a função certa baseado em State.currentView.
+ * ============================================================ */
+function pill(text, cls) { return `<span class="pill ${cls}">${text}</span>`; }
+function truncar(s, n=42) { s = String(s||''); return s.length > n ? s.slice(0,n-1)+'…' : s; }
+
+/* ============================================================
+ * INTERATIVIDADE — sortable tables, search, CSV export, drawer
+ * ============================================================ */
+const _tableSort = {}; // { '#abc-table': { field: 'receitaPeriodo', dir: 'desc' } }
+
+function attachSortable(selector, reRender) {
+  const table = document.querySelector(selector); if (!table) return;
+  $$('thead th[data-sort]', table).forEach(th => {
+    th.style.cursor = 'pointer';
+    th.title = 'Clique para ordenar';
+    th.onclick = () => {
+      const f = th.dataset.sort;
+      const cur = _tableSort[selector] || {};
+      if (cur.field === f) {
+        cur.dir = cur.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        cur.field = f; cur.dir = 'desc';
+      }
+      _tableSort[selector] = cur;
+      // update header indicators
+      $$('thead th[data-sort]', table).forEach(h => h.innerHTML = h.innerHTML.replace(/\s*[▲▼]\s*$/,''));
+      th.innerHTML = th.innerHTML.replace(/\s*[▲▼]\s*$/,'') + (cur.dir==='asc'?' ▲':' ▼');
+      reRender && reRender();
+    };
+  });
+}
+function applySort(rows, selector) {
+  const s = _tableSort[selector]; if (!s || !s.field) return rows;
+  const f = s.field, dir = s.dir === 'asc' ? 1 : -1;
+  return [...rows].sort((a,b) => {
+    const va = a[f], vb = b[f];
+    if (va == null && vb == null) return 0;
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'number' || typeof vb === 'number') return (va - vb) * dir;
+    return String(va).localeCompare(String(vb), 'pt-BR') * dir;
+  });
+}
+function exportTableCSV(tableId, filename='tabela') {
+  const table = document.getElementById(tableId); if (!table) return;
+  const rows = [];
+  const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.replace(/[▲▼]/g,'').trim()).filter(Boolean);
+  rows.push(headers.join(';'));
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    const cells = [...tr.querySelectorAll('td')].map(td => {
+      // limpa pills e tags, mantém texto
+      const txt = td.textContent.trim().replace(/\s+/g,' ');
+      // aspas se tem ; ou quebra
+      return /[;"\n]/.test(txt) ? `"${txt.replace(/"/g,'""')}"` : txt;
+    });
+    rows.push(cells.join(';'));
+  });
+  const blob = new Blob(['\ufeff' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${filename}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast('CSV exportado.');
+}
+function attachRowClick(tbody) {
+  tbody.querySelectorAll('tr[data-sku]').forEach(tr => {
+    tr.style.cursor = 'pointer';
+    tr.onclick = (e) => {
+      // evita clique em selects/inputs dentro
+      if (e.target.matches('input,select,button,a')) return;
+      openSKUDrawer(tr.dataset.sku);
+    };
+  });
+}
+
+/* Drawer lateral de detalhe do SKU */
+function openSKUDrawer(key) {
+  // procura item em State.items pelo barcode OU nas listas consolidadas
+  const item = State.items.find(i => i.barcode === key) ||
+               State.items.find(i => i.codVendas === key) ||
+               State.items.find(i => i.referencia === key);
+  if (!item) { toast('SKU não encontrado.', true); return; }
+
+  // Reúne TUDO do produto: estoque por loja, vendas por mês, ordens de produção
+  const sameBarcode = State.items.filter(i => i.barcode === item.barcode);
+  const sameCod = State.items.filter(i => i.codVendas === item.codVendas);
+  // Estoque por loja
+  const estPorLoja = {};
+  sameBarcode.forEach(i => { estPorLoja[i.armazenador] = (estPorLoja[i.armazenador]||0) + i.estoque; });
+
+  // Vendas mensais por loja (últimos 12 meses)
+  const ref = State.dataRefDate || new Date();
+  const start = new Date(ref); start.setMonth(start.getMonth()-11); start.setDate(1);
+  const vendasMes = new Map();
+  State.raw.vendas.forEach(v => {
+    if (v.cod !== item.codVendas) return;
+    if (!v.data || v.data < start) return;
+    if (v.tamanho !== item.tamanho) return;
+    const k = `${v.data.getFullYear()}-${String(v.data.getMonth()+1).padStart(2,'0')}`;
+    if (!vendasMes.has(k)) vendasMes.set(k, {});
+    const m = vendasMes.get(k);
+    m[v.empresa] = (m[v.empresa]||0) + v.qty;
+  });
+  const meses = [];
+  for (let d = new Date(start); d <= ref; d.setMonth(d.getMonth()+1)) {
+    meses.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const empresasSet = [...new Set(State.items.map(i => i.empresa).filter(Boolean))].sort();
+
+  // Ordens de produção
+  const ordens = State.raw.ordens.filter(o => o.cod === item.codVendas && o.tamanho === item.tamanho);
+  const totalProduzido = ordens.reduce((a,o) => a + o.qty, 0);
+  const totalVendidoRede = sameBarcode[0]?.vendasTotalQty || 0;
+  const sellThrough = totalProduzido > 0 ? totalVendidoRede / totalProduzido : null;
+
+  const drawer = document.getElementById('sku-drawer') || (() => {
+    const d = document.createElement('div');
+    d.id = 'sku-drawer';
+    d.innerHTML = `<div class="sku-backdrop"></div><div class="sku-panel"></div>`;
+    document.body.appendChild(d);
+    d.querySelector('.sku-backdrop').onclick = closeSKUDrawer;
+    return d;
+  })();
+
+  const lojasEmEstoque = Object.entries(estPorLoja).filter(([,q]) => q>0);
+  drawer.querySelector('.sku-panel').innerHTML = `
+    <div class="sku-head">
+      <div>
+        <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:0.6px;font-weight:600">${item.referencia||''} · ${item.grupo||''}</div>
+        <h2 style="font-size:18px;font-weight:700;margin-top:4px">${item.produto}</h2>
+        <div style="color:#71717a;margin-top:4px;font-size:13px">${item.cor||''} · Tamanho ${item.tamanho||''} · SKU ${item.barcode}</div>
+        ${item.bestseller ? pill('BESTSELLER','best') : ''}
+      </div>
+      <button class="sku-close" onclick="closeSKUDrawer()" title="Fechar">×</button>
+    </div>
+
+    <div class="sku-kpis">
+      <div class="sku-kpi"><span>Estoque rede</span><strong>${fmtNum(sum(sameBarcode, x => x.estoque))}</strong></div>
+      <div class="sku-kpi"><span>Vendido 90d (rede)</span><strong>${fmtNum(sum(sameBarcode.map(i=>i._vendasJanela(90)), x => x.qty))}</strong></div>
+      <div class="sku-kpi"><span>Produzido total</span><strong>${fmtNum(totalProduzido)}</strong></div>
+      <div class="sku-kpi"><span>Sell-through</span><strong>${sellThrough!=null?fmtPct(sellThrough):'—'}</strong></div>
+      <div class="sku-kpi"><span>Última venda</span><strong>${item.lastSale?item.lastSale.toLocaleDateString('pt-BR'):'—'}</strong></div>
+      <div class="sku-kpi"><span>Dias sem venda</span><strong>${item.diasSemVenda==null?'—':item.diasSemVenda+'d'}</strong></div>
+    </div>
+
+    <div class="sku-section">
+      <h3>Estoque por local</h3>
+      <div class="table-wrap"><table style="width:100%"><thead><tr><th>Local</th><th class="num">Estoque</th></tr></thead>
+        <tbody>${lojasEmEstoque.length? lojasEmEstoque.map(([l,q]) => `<tr><td>${l}</td><td class="num strong">${fmtNum(q)}</td></tr>`).join('') : '<tr><td colspan="2" class="empty">Zerado em todas as lojas</td></tr>'}</tbody>
+      </table></div>
+    </div>
+
+    <div class="sku-section">
+      <h3>Vendas últimos 12 meses (por loja)</h3>
+      <div class="chart-wrap" style="height:220px"><canvas id="sku-chart"></canvas></div>
+    </div>
+
+    ${ordens.length ? `<div class="sku-section">
+      <h3>Ordens de produção (${ordens.length})</h3>
+      <div class="table-wrap"><table style="width:100%"><thead><tr><th>Ordem</th><th>Prev. entrega</th><th class="num">Qty</th></tr></thead>
+        <tbody>${ordens.map(o => `<tr><td>${o.ordem||'—'}</td><td>${o.data?o.data.toLocaleDateString('pt-BR'):'—'}</td><td class="num strong">${fmtNum(o.qty)}</td></tr>`).join('')}</tbody>
+      </table></div>
+    </div>` : ''}
+  `;
+  drawer.classList.add('open');
+  // gráfico de vendas mensal
+  setTimeout(() => {
+    const ctx = document.getElementById('sku-chart'); if (!ctx) return;
+    const datasets = empresasSet.map((emp, idx) => ({
+      label: emp.replace('TVB ',''),
+      data: meses.map(m => (vendasMes.get(m) || {})[emp] || 0),
+      backgroundColor: ['#18181b','#059669','#4f46e5','#d97706','#dc2626'][idx % 5]
+    }));
+    if (charts['sku-chart']) charts['sku-chart'].destroy();
+    charts['sku-chart'] = new Chart(ctx, {
+      type:'bar',
+      data:{ labels: meses, datasets },
+      options:{ plugins:{ legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}} },
+                responsive:true, maintainAspectRatio:false,
+                scales:{ x:{stacked:true}, y:{stacked:true, beginAtZero:true} } }
+    });
+  }, 30);
+}
+function closeSKUDrawer() {
+  const d = document.getElementById('sku-drawer'); if (d) d.classList.remove('open');
+}
+
+function hasData() { return State.items.length > 0; }
+function emptyState() {
+  return `<div class="empty">
+    <p style="font-size:15px;color:#52525b;margin-bottom:8px">Nenhum dado carregado ainda.</p>
+    <p>Vá até a aba <strong>Dados</strong> e faça upload das planilhas (Estoque, Vendas, Produtos, Ordem de Produção, Devoluções).</p>
+    <button class="btn primary" style="margin-top:14px" onclick="goto('dados')">Ir para Dados</button>
+  </div>`;
+}
+
+/* View: VISÃO GERAL */
+function viewOverview() {
+  if (!hasData()) return emptyState();
+  const items = enrich(viewItems('referencia'), State.filters.periodo);
+  const withABC = classifyABC(items);
+  const janela = State.filters.periodo === 'all' ? 'todo o período' : `últimos ${State.filters.periodo} dias`;
+  const totalEstoque = sum(items, i => i.estoque);
+  const totalValor = sum(items, i => (i.estoque || 0) * (i.produzido > 0 && i.receitaTotal > 0 ? (i.receitaTotal / (i.vendasTotalQty||1)) : 0));
+  const totalVendido = sum(items, i => i.vendasPeriodo);
+  const receitaTotal = sum(items, i => i.receitaPeriodo);
+  const rupturas = items.filter(i => i.ruptura).length;
+  const encalhados = items.filter(i => i.diasSemVenda != null && i.diasSemVenda >= State.rules.envAlerta && i.estoque > 0).length;
+  const ticketMedio = totalVendido > 0 ? receitaTotal / totalVendido : 0;
+  const topVendidos = [...items].sort((a,b) => b.vendasPeriodo - a.vendasPeriodo).slice(0,8).filter(i => i.vendasPeriodo > 0);
+
+  const consolidado = State.filters.empresa === 'all';
+  // Guardamos TODOS ordenados por vendas, tabela fica interativa
+  State._ovAllRows = [...items].sort((a,b) => (b.vendasPeriodo||0) - (a.vendasPeriodo||0));
+
+  const snapDate = State.dataRefDate ? State.dataRefDate.toLocaleDateString('pt-BR') : '—';
+  return `
+    <div class="intro">
+      <div>
+        <h2>Panorama TVB</h2>
+        <p>Visão consolidada do estoque em <strong>${snapDate}</strong> cruzado com vendas dos <strong>${janela}</strong>. Use o seletor de período no topo para mudar a janela de análise.</p>
+      </div>
+      <div class="actions">
+        <button class="btn" onclick="goto('sugestoes')">Ver sugestões</button>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Estoque total</div><div class="value">${fmtNum(totalEstoque)}</div><div class="hint">peças</div></div>
+      <div class="kpi info"><div class="label">Vendido (${janela})</div><div class="value">${fmtNum(totalVendido)}</div><div class="hint">${fmtBRL(receitaTotal)}</div></div>
+      <div class="kpi ok"><div class="label">Ticket médio</div><div class="value">${fmtBRL(ticketMedio)}</div><div class="hint">por peça</div></div>
+      <div class="kpi ${rupturas>0?'bad':'ok'}"><div class="label">Em ruptura</div><div class="value">${fmtNum(rupturas)}</div><div class="hint">SKUs sem estoque com demanda ativa</div></div>
+      <div class="kpi ${encalhados>10?'warn':''}"><div class="label">Encalhados</div><div class="value">${fmtNum(encalhados)}</div><div class="hint">60+ dias sem venda</div></div>
+    </div>
+    <div class="grid-2-35">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Produtos vendidos</h3>
+          <div class="actions">
+            <input type="search" data-ov-search placeholder="Buscar..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:160px">
+            <button class="btn" onclick="exportTableCSV('ov-top-table','produtos_visao_geral')">↓ CSV</button>
+          </div>
+        </div>
+        <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+          <table id="ov-top-table" class="sortable">
+            <thead><tr>
+              <th data-sort="produto">Produto</th>
+              <th data-sort="corLabel">Cor</th>
+              <th data-sort="tamanhoLabel">Tam</th>
+              ${consolidado?'':'<th data-sort="empresa">Loja</th>'}
+              <th class="num" data-sort="vendasPeriodo">Vendas</th>
+              <th class="num" data-sort="receitaPeriodo">Receita</th>
+              <th class="num" data-sort="estoque">Estoque</th>
+              <th></th>
+            </tr></thead>
+            <tbody id="ov-top-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Composição por categoria</h3></div>
+        <div class="chart-wrap sm"><canvas id="ovChartCat"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head"><h3>Vendas por loja — últimos 180 dias</h3></div>
+      <div class="chart-wrap"><canvas id="ovChartLojas"></canvas></div>
+    </div>
+  `;
+}
+function viewOverviewCharts() {
+  const items = enrich(viewItems('referencia'), State.filters.periodo);
+  // Categoria
+  const byCat = {};
+  items.forEach(i => { if (!byCat[i.grupo]) byCat[i.grupo] = 0; byCat[i.grupo] += i.receitaPeriodo; });
+  const cats = Object.entries(byCat).sort((a,b) => b[1]-a[1]).slice(0,10);
+  chart('ovChartCat', {
+    type: 'bar',
+    data: { labels: cats.map(c => c[0]||'—'), datasets: [{ data: cats.map(c => c[1]), backgroundColor: '#18181b' }] },
+    options: { indexAxis:'y', plugins:{ legend:{display:false} }, scales:{ x:{ ticks:{ callback: v => 'R$ '+(v/1000).toFixed(0)+'k' } } } }
+  });
+  // Vendas por loja últimos 180 dias — linha
+  const ref = State.dataRefDate || new Date();
+  const end = new Date(ref);
+  const start = new Date(ref); start.setDate(start.getDate() - 180);
+  const buckets = {}; // dia -> loja -> qty
+  State.raw.vendas.forEach(v => {
+    if (!v.data || v.data < start || v.data > end) return;
+    const d = v.data.toISOString().slice(0,10);
+    if (!buckets[d]) buckets[d] = {};
+    const emp = v.empresa || '—';
+    buckets[d][emp] = (buckets[d][emp] || 0) + v.qty;
+  });
+  const days = Object.keys(buckets).sort();
+  const lojas = [...new Set(State.raw.vendas.map(v => v.empresa))].filter(Boolean);
+  const colors = { 'TVB Site e Atacado':'#18181b', 'TVB Leblon':'#059669', 'TVB Rio Sul':'#4f46e5' };
+  // Agregar por semana pra ficar mais legível
+  const weekly = {};
+  days.forEach(d => {
+    const dt = new Date(d);
+    const wk = new Date(dt); wk.setDate(wk.getDate() - wk.getDay());
+    const wkKey = wk.toISOString().slice(0,10);
+    if (!weekly[wkKey]) weekly[wkKey] = {};
+    Object.entries(buckets[d]).forEach(([l,q]) => weekly[wkKey][l] = (weekly[wkKey][l]||0) + q);
+  });
+  const wkKeys = Object.keys(weekly).sort();
+  chart('ovChartLojas', {
+    type: 'line',
+    data: {
+      labels: wkKeys.map(w => new Date(w).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})),
+      datasets: lojas.map(l => ({
+        label: l, data: wkKeys.map(w => weekly[w][l] || 0),
+        borderColor: colors[l] || '#a1a1aa', backgroundColor: (colors[l] || '#a1a1aa')+'20',
+        tension: 0.3, fill: false, borderWidth: 2, pointRadius: 0
+      }))
+    },
+    options: { plugins:{ legend:{ position:'top', align:'end', labels:{ boxWidth:10, boxHeight:10 } } }, scales:{ y:{ title:{display:true,text:'Peças'} } } }
+  });
+  // Tabela interativa de Top Vendidos
+  renderOvTable();
+  attachSortable('#ov-top-table', renderOvTable);
+  const ovSearch = document.querySelector('[data-ov-search]');
+  if (ovSearch) ovSearch.oninput = renderOvTable;
+}
+function renderOvTable() {
+  const tbody = document.getElementById('ov-top-tbody'); if (!tbody) return;
+  const consolidado = State.filters.empresa === 'all';
+  const q = (document.querySelector('[data-ov-search]')?.value || '').toLowerCase().trim();
+  let rows = State._ovAllRows || [];
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#ov-top-table');
+  tbody.innerHTML = rows.slice(0,300).map(i => `<tr data-sku="${i.barcode||i._key}">
+    <td class="strong">${truncar(i.produto)}</td>
+    <td>${i.corLabel||i.cor||''}</td>
+    <td>${i.tamanhoLabel||i.tamanho||''}</td>
+    ${consolidado?'':`<td>${(i.empresa||'').replace('TVB ','')}</td>`}
+    <td class="num">${fmtNum(i.vendasPeriodo)}</td>
+    <td class="num">${fmtBRL(i.receitaPeriodo)}</td>
+    <td class="num">${fmtNum(i.estoque)}</td>
+    <td>${i.bestseller ? pill('BEST','best') : ''}</td>
+  </tr>`).join('') || `<tr><td colspan="${consolidado?7:8}" class="empty">Sem vendas no período</td></tr>`;
+  attachRowClick(tbody);
+}
+
+/* ============== GIRO ============== */
+function viewGiro() {
+  if (!hasData()) return emptyState();
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.estoque > 0);
+  const r = State.rules;
+  const consolidado = State.filters.empresa === 'all';
+  const alto = items.filter(i => i.giro >= r.giroAlto).length;
+  const medio = items.filter(i => i.giro > r.giroBaixo && i.giro < r.giroAlto).length;
+  const baixo = items.filter(i => i.giro <= r.giroBaixo).length;
+  const semVenda = items.filter(i => !i.giro || i.giro === 0).length;
+  const giroMedio = items.length ? items.reduce((a,i) => a + (i.giro||0), 0) / items.length : 0;
+  State._giroAllRows = [...items].sort((a,b) => (b.giro||0) - (a.giro||0));
+
+  return `
+    <div class="intro">
+      <div><h2>Giro de Estoque</h2>
+      <p>Quantas vezes o estoque é renovado no ano (anualizado). Giro ≥ <strong>${r.giroAlto}x</strong> = alto. Giro ≤ <strong>${r.giroBaixo}x</strong> = baixo.</p></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi ok"><div class="label">Giro alto</div><div class="value">${fmtNum(alto)}</div><div class="hint">SKUs ≥ ${r.giroAlto}x</div></div>
+      <div class="kpi warn"><div class="label">Giro médio</div><div class="value">${fmtNum(medio)}</div></div>
+      <div class="kpi bad"><div class="label">Giro baixo</div><div class="value">${fmtNum(baixo)}</div><div class="hint">SKUs ≤ ${r.giroBaixo}x</div></div>
+      <div class="kpi"><div class="label">Sem venda</div><div class="value">${fmtNum(semVenda)}</div></div>
+      <div class="kpi info"><div class="label">Giro médio</div><div class="value">${fmtNum(giroMedio,1)}x</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Distribuição de giro</h3></div>
+        <div class="chart-wrap"><canvas id="giroDist"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Giro médio por categoria</h3></div>
+        <div class="chart-wrap"><canvas id="giroCat"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>SKUs por giro</h3>
+        <div class="actions">
+          <select data-giro-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="all">Todas as classes</option>
+            <option value="alto">Giro alto</option>
+            <option value="medio">Giro médio</option>
+            <option value="baixo">Giro baixo</option>
+            <option value="sem-dados">Sem venda</option>
+          </select>
+          <input type="search" data-table-search placeholder="Buscar produto/cor..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+          <button class="btn" onclick="exportTableCSV('giro-table','giro_estoque')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+        <table id="giro-table" class="sortable">
+          <thead><tr>
+            <th data-sort="produto">Produto</th>
+            <th data-sort="cor">Cor</th>
+            <th data-sort="tamanho">Tam</th>
+            ${consolidado?'':'<th data-sort="empresa">Loja</th>'}
+            <th class="num" data-sort="estoque">Estoque</th>
+            <th class="num" data-sort="vendasPeriodo">Vendas</th>
+            <th class="num" data-sort="giro">Giro</th>
+            <th>Classe</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="giro-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewGiroCharts() {
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.estoque > 0);
+  const bins = [0, 0.5, 1, 2, 4, 6, 10, 100];
+  const labels = ['< 0.5x','0.5–1x','1–2x','2–4x','4–6x','6–10x','10+x'];
+  const counts = new Array(labels.length).fill(0);
+  items.forEach(i => {
+    const g = i.giro || 0;
+    for (let j=0; j<bins.length-1; j++) if (g >= bins[j] && g < bins[j+1]) { counts[j]++; break; }
+  });
+  chart('giroDist', {
+    type:'bar',
+    data:{ labels, datasets:[{ data: counts, backgroundColor: ['#dc2626','#dc2626','#d97706','#d97706','#059669','#059669','#059669'] }] },
+    options:{ plugins:{ legend:{display:false} }, scales:{ y:{ title:{display:true, text:'Nº de SKUs'} } } }
+  });
+  const byCat = {};
+  items.forEach(i => {
+    if (!byCat[i.grupo]) byCat[i.grupo] = { sum: 0, n: 0 };
+    byCat[i.grupo].sum += i.giro || 0; byCat[i.grupo].n += 1;
+  });
+  const catData = Object.entries(byCat).map(([k,v]) => [k, v.sum / v.n]).sort((a,b) => b[1]-a[1]).slice(0,12);
+  chart('giroCat', {
+    type:'bar',
+    data:{ labels: catData.map(c => c[0]||'—'), datasets:[{ data: catData.map(c => c[1]), backgroundColor:'#4f46e5' }] },
+    options:{ indexAxis:'y', plugins:{ legend:{display:false} }, scales:{ x:{ title:{display:true, text:'Giro médio'} } } }
+  });
+  renderGiroTable();
+  attachSortable('#giro-table', renderGiroTable);
+  const giroCls = document.querySelector('[data-giro-class]');
+  if (giroCls) giroCls.onchange = renderGiroTable;
+  const search = document.querySelector('[data-table-search]');
+  if (search) search.oninput = renderGiroTable;
+}
+function renderGiroTable() {
+  const tbody = document.getElementById('giro-tbody'); if (!tbody) return;
+  const consolidado = State.filters.empresa === 'all';
+  const sel = document.querySelector('[data-giro-class]');
+  const q = (document.querySelector('[data-table-search]')?.value || '').toLowerCase().trim();
+  let rows = State._giroAllRows || [];
+  if (sel && sel.value !== 'all') {
+    rows = rows.filter(i => classifyGiro(i.giro) === sel.value);
+  }
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#giro-table');
+  tbody.innerHTML = rows.slice(0,500).map(i => {
+    const cls = classifyGiro(i.giro);
+    const pillCls = cls==='alto' ? 'ok' : cls==='baixo' ? 'bad' : 'warn';
+    return `<tr data-sku="${i.barcode||i._key}">
+      <td class="strong">${truncar(i.produto)}</td>
+      <td>${i.corLabel||i.cor||''}</td>
+      <td>${i.tamanhoLabel||i.tamanho||''}</td>
+      ${consolidado?'':`<td>${(i.empresa||'').replace('TVB ','')}</td>`}
+      <td class="num">${fmtNum(i.estoque)}</td>
+      <td class="num">${fmtNum(i.vendasPeriodo)}</td>
+      <td class="num">${i.giro ? fmtNum(i.giro, 1)+'x' : '—'}</td>
+      <td>${pill(cls.toUpperCase(), pillCls)}</td>
+      <td>${i.bestseller ? pill('BEST','best') : ''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="9" class="empty">Nenhum SKU corresponde</td></tr>';
+  attachRowClick(tbody);
+}
+
+/* ============== COBERTURA ============== */
+function viewCobertura() {
+  if (!hasData()) return emptyState();
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.estoque > 0);
+  const r = State.rules;
+  const baixa = items.filter(i => i.cobertura != null && i.cobertura !== Infinity && i.cobertura < r.cobBaixa).length;
+  const ok = items.filter(i => i.cobertura != null && i.cobertura !== Infinity && i.cobertura >= r.cobBaixa && i.cobertura <= r.cobAlta).length;
+  const excessiva = items.filter(i => i.cobertura === Infinity || (i.cobertura != null && i.cobertura > r.cobAlta)).length;
+  const cobMedia = (() => {
+    const valid = items.filter(i => i.cobertura != null && i.cobertura !== Infinity).map(i => i.cobertura);
+    return valid.length ? valid.reduce((a,b) => a+b, 0) / valid.length : 0;
+  })();
+
+  const consolidado = State.filters.empresa === 'all';
+  // guardamos TODOS ordenados por vendas (pra tabela interativa)
+  State._cobAllRows = [...items].sort((a,b) => (b.vendasPeriodo||0) - (a.vendasPeriodo||0));
+
+  return `
+    <div class="intro">
+      <div><h2>Cobertura de Estoque</h2>
+      <p>Quantos dias de vendas o estoque atual cobre. Baixa &lt; <strong>${r.cobBaixa}</strong> | Saudável entre <strong>${r.cobBaixa}–${r.cobAlta}</strong> | Excessiva &gt; <strong>${r.cobAlta}</strong>. Editável em Regras.</p></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi bad"><div class="label">Cobertura baixa</div><div class="value">${fmtNum(baixa)}</div><div class="hint">risco de ruptura</div></div>
+      <div class="kpi ok"><div class="label">Saudável</div><div class="value">${fmtNum(ok)}</div></div>
+      <div class="kpi warn"><div class="label">Excessiva</div><div class="value">${fmtNum(excessiva)}</div><div class="hint">capital parado</div></div>
+      <div class="kpi info"><div class="label">Cobertura média</div><div class="value">${fmtNum(cobMedia)}d</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Distribuição de cobertura</h3></div>
+        <div class="chart-wrap"><canvas id="cobDist"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Cobertura média por categoria</h3></div>
+        <div class="chart-wrap"><canvas id="cobCat"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>SKUs por cobertura</h3>
+        <div class="actions">
+          <select data-cob-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="all">Todas</option>
+            <option value="baixa">Baixa (risco ruptura)</option>
+            <option value="ok">Saudável</option>
+            <option value="excessiva">Excessiva</option>
+            <option value="sem-venda">Sem venda</option>
+          </select>
+          <input type="search" data-table-search placeholder="Buscar produto/cor..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+          <button class="btn" onclick="exportTableCSV('cob-table','cobertura')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+        <table id="cob-table" class="sortable">
+          <thead><tr>
+            <th data-sort="produto">Produto</th>
+            <th data-sort="cor">Cor</th>
+            <th data-sort="tamanho">Tam</th>
+            ${consolidado?'':'<th data-sort="empresa">Loja</th>'}
+            <th class="num" data-sort="estoque">Estoque</th>
+            <th class="num" data-sort="vendasPeriodo">Vendas</th>
+            <th class="num" data-sort="cobertura">Cobertura</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="cob-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewCoberturaCharts() {
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.estoque > 0);
+  const r = State.rules;
+  const bins = [0, 7, 15, r.cobBaixa, 45, r.cobAlta, 90, 180, 10000];
+  const labels = [`0-7d`,`7-15d`,`15-${r.cobBaixa}d`,`${r.cobBaixa}-45d`,`45-${r.cobAlta}d`,`${r.cobAlta}-90d`,`90-180d`,`180d+`];
+  const counts = new Array(labels.length).fill(0);
+  const colors = ['#dc2626','#dc2626','#d97706','#059669','#059669','#d97706','#d97706','#b91c1c'];
+  items.forEach(i => {
+    const c = i.cobertura;
+    if (c == null || c === Infinity) { counts[counts.length-1]++; return; }
+    for (let j=0; j<bins.length-1; j++) if (c >= bins[j] && c < bins[j+1]) { counts[j]++; break; }
+  });
+  chart('cobDist', {
+    type:'bar',
+    data:{ labels, datasets:[{ data: counts, backgroundColor: colors }] },
+    options:{ plugins:{ legend:{display:false} }, scales:{ y:{ title:{display:true, text:'Nº de SKUs'} } } }
+  });
+  const byCat = {};
+  items.forEach(i => {
+    if (i.cobertura == null || i.cobertura === Infinity) return;
+    if (!byCat[i.grupo]) byCat[i.grupo] = { sum:0, n:0 };
+    byCat[i.grupo].sum += i.cobertura; byCat[i.grupo].n++;
+  });
+  const data = Object.entries(byCat).map(([k,v]) => [k, v.sum/v.n]).sort((a,b) => b[1]-a[1]).slice(0,12);
+  chart('cobCat', {
+    type:'bar',
+    data:{ labels: data.map(d => d[0]||'—'), datasets:[{ data: data.map(d => d[1]), backgroundColor:'#4f46e5' }] },
+    options:{ indexAxis:'y', plugins:{ legend:{display:false} }, scales:{ x:{ title:{display:true, text:'Dias de cobertura'} } } }
+  });
+  renderCobTable();
+  attachSortable('#cob-table', renderCobTable);
+  const cobSel = document.querySelector('[data-cob-class]');
+  if (cobSel) cobSel.onchange = renderCobTable;
+  const search = document.querySelector('[data-table-search]');
+  if (search) search.oninput = renderCobTable;
+}
+function renderCobTable() {
+  const tbody = document.getElementById('cob-tbody'); if (!tbody) return;
+  const consolidado = State.filters.empresa === 'all';
+  const sel = document.querySelector('[data-cob-class]');
+  const q = (document.querySelector('[data-table-search]')?.value || '').toLowerCase().trim();
+  let rows = State._cobAllRows || [];
+  if (sel && sel.value !== 'all') rows = rows.filter(i => classifyCobertura(i.cobertura) === sel.value);
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#cob-table');
+  tbody.innerHTML = rows.slice(0,500).map(i => {
+    const cls = classifyCobertura(i.cobertura);
+    const pillCls = cls==='baixa'?'bad':cls==='excessiva'?'warn':cls==='ok'?'ok':'neutral';
+    const cobDisp = i.cobertura === Infinity ? '∞' : (i.cobertura==null?'—':fmtNum(i.cobertura,0)+'d');
+    return `<tr data-sku="${i.barcode||i._key}">
+      <td class="strong">${truncar(i.produto)}</td>
+      <td>${i.corLabel||i.cor||''}</td>
+      <td>${i.tamanhoLabel||i.tamanho||''}</td>
+      ${consolidado?'':`<td>${(i.empresa||'').replace('TVB ','')}</td>`}
+      <td class="num">${fmtNum(i.estoque)}</td>
+      <td class="num">${fmtNum(i.vendasPeriodo)}</td>
+      <td class="num">${cobDisp}</td>
+      <td>${pill(cls.toUpperCase(), pillCls)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">Nenhum SKU corresponde</td></tr>';
+  attachRowClick(tbody);
+}
+
+/* ============== SELL-THROUGH ============== */
+function viewSellThrough() {
+  if (!hasData()) return emptyState();
+  // Agregamos por REFERÊNCIA (modelo) — uma linha por produto, não por tamanho.
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.produzido > 0);
+  const computed = items.map(i => ({ ...i, st: i.produzido>0 ? (i.vendasTotalQty / i.produzido) : 0 }));
+
+  const bomST = computed.filter(i => i.st >= 0.8).length;
+  const medST = computed.filter(i => i.st >= 0.5 && i.st < 0.8).length;
+  const ruimST = computed.filter(i => i.st < 0.5).length;
+  const mediaST = computed.length ? computed.reduce((a,i) => a + i.st, 0) / computed.length : 0;
+  const totalProd = sum(computed, i => i.produzido);
+  const totalVend = sum(computed, i => i.vendasTotalQty);
+
+  const consolidado = State.filters.empresa === 'all';
+  State._stAllRows = [...computed].sort((a,b) => a.st - b.st);
+
+  return `
+    <div class="intro">
+      <div><h2>Sell-through (Vendido ÷ Produzido)</h2>
+      <p>Das peças finalizadas na produção, quantas já foram vendidas. Agregado por <strong>referência</strong>. Total: <strong>${fmtNum(totalVend)}/${fmtNum(totalProd)}</strong> = ${fmtPct(totalVend/(totalProd||1))}.</p></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi ok" data-st-filter="alto" style="cursor:pointer"><div class="label">Sell-through alto</div><div class="value">${fmtNum(bomST)}</div><div class="hint">≥ 80%</div></div>
+      <div class="kpi warn" data-st-filter="medio" style="cursor:pointer"><div class="label">Médio</div><div class="value">${fmtNum(medST)}</div><div class="hint">50-80%</div></div>
+      <div class="kpi bad" data-st-filter="baixo" style="cursor:pointer"><div class="label">Baixo</div><div class="value">${fmtNum(ruimST)}</div><div class="hint">&lt; 50%</div></div>
+      <div class="kpi info"><div class="label">Média geral</div><div class="value">${fmtPct(mediaST)}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Sell-through por categoria</h3></div>
+        <div class="chart-wrap"><canvas id="stCat"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Produzido vs Vendido</h3></div>
+        <div class="chart-wrap"><canvas id="stScatter"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Referências por sell-through</h3>
+        <div class="actions">
+          <select data-st-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="all">Todas</option>
+            <option value="baixo">Baixo (&lt; 50%)</option>
+            <option value="medio">Médio (50-80%)</option>
+            <option value="alto">Alto (≥ 80%)</option>
+          </select>
+          <input type="search" data-table-search placeholder="Buscar produto/referência..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:220px">
+          <button class="btn" onclick="exportTableCSV('st-table','sell_through')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+        <table id="st-table" class="sortable">
+          <thead><tr>
+            <th data-sort="referencia">Referência</th>
+            <th data-sort="produto">Produto</th>
+            <th data-sort="corLabel">Cor</th>
+            <th class="num" data-sort="produzido">Produzido</th>
+            <th class="num" data-sort="vendasTotalQty">Vendido</th>
+            <th class="num" data-sort="estoque">Estoque</th>
+            <th class="num" data-sort="st">Sell-through</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="st-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewSellThroughCharts() {
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.produzido > 0);
+  const byCat = {};
+  items.forEach(i => {
+    if (!byCat[i.grupo]) byCat[i.grupo] = { prod:0, vend:0 };
+    byCat[i.grupo].prod += i.produzido; byCat[i.grupo].vend += i.vendasTotalQty;
+  });
+  const data = Object.entries(byCat).map(([k,v]) => [k, v.prod>0?v.vend/v.prod:0, v.prod, v.vend]).sort((a,b) => b[1]-a[1]).slice(0,12);
+  chart('stCat', {
+    type:'bar',
+    data:{ labels: data.map(d => d[0]||'—'), datasets:[{ data: data.map(d => d[1]*100), backgroundColor: data.map(d => d[1]>=0.8?'#059669':d[1]>=0.5?'#d97706':'#dc2626') }] },
+    options:{ indexAxis:'y', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => fmtPct(ctx.parsed.x/100) } } }, scales:{ x:{ title:{display:true, text:'Sell-through %'}, max:100 } } }
+  });
+  const pts = items.map(i => ({ x: i.produzido, y: i.vendasTotalQty, label: i.produto }));
+  chart('stScatter', {
+    type:'scatter',
+    data:{ datasets:[{ data: pts, backgroundColor: 'rgba(24,24,27,0.35)', pointRadius: 3 }] },
+    options:{ plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => `${ctx.raw.label}: ${ctx.parsed.y}/${ctx.parsed.x}` } } }, scales:{ x:{ title:{display:true,text:'Produzido'} }, y:{ title:{display:true,text:'Vendido'} } } }
+  });
+  renderStTable();
+  attachSortable('#st-table', renderStTable);
+  const sel = document.querySelector('[data-st-class]');
+  if (sel) sel.onchange = renderStTable;
+  const search = document.querySelector('[data-table-search]');
+  if (search) search.oninput = renderStTable;
+  document.querySelectorAll('[data-st-filter]').forEach(el => {
+    el.onclick = () => {
+      const s = document.querySelector('[data-st-class]');
+      if (s) { s.value = el.getAttribute('data-st-filter'); renderStTable(); }
+    };
+  });
+}
+function renderStTable() {
+  const tbody = document.getElementById('st-tbody'); if (!tbody) return;
+  const sel = document.querySelector('[data-st-class]');
+  const q = (document.querySelector('[data-table-search]')?.value || '').toLowerCase().trim();
+  let rows = State._stAllRows || [];
+  if (sel && sel.value !== 'all') {
+    const v = sel.value;
+    if (v === 'alto')  rows = rows.filter(i => i.st >= 0.8);
+    if (v === 'medio') rows = rows.filter(i => i.st >= 0.5 && i.st < 0.8);
+    if (v === 'baixo') rows = rows.filter(i => i.st < 0.5);
+  }
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#st-table');
+  tbody.innerHTML = rows.slice(0,500).map(i => {
+    const cls = i.st >= 0.8 ? 'alto' : i.st >= 0.5 ? 'medio' : 'baixo';
+    const pillCls = cls==='alto'?'ok':cls==='medio'?'warn':'bad';
+    return `<tr data-sku="${i.referencia||i._key}">
+      <td class="strong">${i.referencia||'—'}</td>
+      <td>${truncar(i.produto)}</td>
+      <td>${i.corLabel||i.cor||''}</td>
+      <td class="num">${fmtNum(i.produzido)}</td>
+      <td class="num">${fmtNum(i.vendasTotalQty)}</td>
+      <td class="num">${fmtNum(i.estoque)}</td>
+      <td class="num">${fmtPct(i.st)}</td>
+      <td>${pill(cls.toUpperCase(), pillCls)}${i.bestseller?' '+pill('BEST','best'):''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">Nenhuma referência corresponde</td></tr>';
+  attachRowClick(tbody);
+}
+
+/* ============== CURVA ABC ============== */
+function viewABC() {
+  if (!hasData()) return emptyState();
+  const level = State.rules.abcNivel || 'referencia';
+  const items = enrich(viewItems(level), State.filters.periodo);
+  const classified = classifyABC(items);
+  const a = classified.filter(i => i.abc === 'A').length;
+  const b = classified.filter(i => i.abc === 'B').length;
+  const c = classified.filter(i => i.abc === 'C').length;
+  const receitaA = sum(classified.filter(i => i.abc==='A'), x => x.receitaPeriodo);
+  const receitaB = sum(classified.filter(i => i.abc==='B'), x => x.receitaPeriodo);
+  const receitaC = sum(classified.filter(i => i.abc==='C'), x => x.receitaPeriodo);
+  const total = receitaA + receitaB + receitaC;
+  const r = State.rules;
+  const pctA = r.abcA, pctB = r.abcB - r.abcA, pctC = 100 - r.abcB;
+  const nivelLabel = { referencia:'referência (modelo)', codVendas:'modelo + cor', barcode:'SKU (modelo+cor+tam)' }[level];
+
+  State._abcAllRows = classified;  // guardado pra interatividade (filtro por classe)
+  return `
+    <div class="intro">
+      <div><h2>Curva ABC (por receita)</h2>
+      <p>Nível: <strong>${nivelLabel}</strong>. A = ${pctA}% do faturamento · B = ${pctB}% · C = ${pctC}%. Consolidado ${State.filters.empresa==='all'?'em toda a rede':`em ${State.filters.empresa.replace('TVB ','')}`}.</p></div>
+      <div class="actions">
+        <button class="btn" onclick="exportTableCSV('abc-table','curva_abc')">↓ Exportar CSV</button>
+      </div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi ok" data-abc-filter="A" style="cursor:pointer" title="Clique para filtrar"><div class="label">Classe A · ${pctA}% do faturamento</div><div class="value">${fmtNum(a)}</div><div class="hint">${fmtBRL(receitaA)} (${fmtPct(receitaA/(total||1))})</div></div>
+      <div class="kpi info" data-abc-filter="B" style="cursor:pointer" title="Clique para filtrar"><div class="label">Classe B · ${pctB}%</div><div class="value">${fmtNum(b)}</div><div class="hint">${fmtBRL(receitaB)} (${fmtPct(receitaB/(total||1))})</div></div>
+      <div class="kpi bad" data-abc-filter="C" style="cursor:pointer" title="Clique para filtrar"><div class="label">Classe C · ${pctC}%</div><div class="value">${fmtNum(c)}</div><div class="hint">${fmtBRL(receitaC)} (${fmtPct(receitaC/(total||1))})</div></div>
+    </div>
+    <div class="grid-2-35">
+      <div class="panel">
+        <div class="panel-head"><h3>Pareto (concentração de receita)</h3><div class="muted">${classified.length} itens no nível selecionado</div></div>
+        <div class="chart-wrap"><canvas id="abcPareto"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Receita × Classe</h3></div>
+        <div class="chart-wrap sm"><canvas id="abcPie"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Ranking ABC</h3>
+        <div class="actions">
+          <select data-abc-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="all">Todas as classes</option>
+            <option value="A">Apenas Classe A</option>
+            <option value="B">Apenas Classe B</option>
+            <option value="C">Apenas Classe C</option>
+          </select>
+          <input type="search" data-table-search placeholder="Buscar produto/ref..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:560px;overflow-y:auto">
+        <table id="abc-table" class="sortable">
+          <thead><tr>
+            <th data-sort="abc">Classe</th>
+            <th data-sort="produto">${level==='referencia'?'Referência':'Produto'}</th>
+            ${level==='barcode'?'<th data-sort="cor">Cor</th><th data-sort="tamanho">Tam</th>':''}
+            ${level==='codVendas'?'<th data-sort="cor">Cor</th>':''}
+            <th class="num" data-sort="vendasPeriodo">Vendas</th>
+            <th class="num" data-sort="receitaPeriodo">Receita</th>
+            <th class="num" data-sort="estoque">Estoque</th>
+            <th class="num" data-sort="pctAcum">% acum</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="abc-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewABCCharts() {
+  const level = State.rules.abcNivel || 'referencia';
+  const items = enrich(viewItems(level), State.filters.periodo);
+  const classified = classifyABC(items);
+  const sorted = [...classified].sort((a,b) => (b.receitaPeriodo||0) - (a.receitaPeriodo||0));
+  const total = sum(sorted, x => x.receitaPeriodo||0) || 1;
+
+  // Pareto: mostra todos (não só top 150) — o usuário pediu ABC realista
+  let acc = 0;
+  const points = [];
+  sorted.forEach((it, i) => {
+    acc += it.receitaPeriodo || 0;
+    points.push((acc/total)*100);
+    it.pctAcum = (acc/total)*100;  // anota pra usar na tabela
+  });
+  chart('abcPareto', {
+    type:'line',
+    data:{ labels: points.map((_,i) => i+1), datasets:[{ data: points, borderColor:'#18181b', fill:true, backgroundColor:'rgba(24,24,27,0.08)', tension:0.2, pointRadius:0 }] },
+    options:{
+      plugins:{ legend:{display:false},
+        annotation:{}, // placeholder
+        tooltip:{ callbacks:{ label: ctx => `Top ${ctx.parsed.x}: ${ctx.parsed.y.toFixed(1)}% receita acumulada` } }
+      },
+      scales:{ x:{ title:{display:true,text:'Top N itens'} }, y:{ title:{display:true,text:'% receita acumulada'}, max:100 } }
+    }
+  });
+  const byClass = { A:0, B:0, C:0 };
+  classified.forEach(i => byClass[i.abc] = (byClass[i.abc]||0) + (i.receitaPeriodo||0));
+  chart('abcPie', {
+    type:'doughnut',
+    data:{ labels:['A','B','C'], datasets:[{ data:[byClass.A, byClass.B, byClass.C], backgroundColor:['#059669','#4f46e5','#dc2626'] }] },
+    options:{ plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label: ctx => `${ctx.label}: ${fmtBRL(ctx.parsed)}` } } },
+      onClick: (evt, elements) => {
+        if (!elements.length) return;
+        const cls = ['A','B','C'][elements[0].index];
+        const sel = document.querySelector('[data-abc-class]');
+        if (sel) { sel.value = cls; sel.dispatchEvent(new Event('change')); }
+      }
+    }
+  });
+
+  // Ao invés de render estático top-100, deixa a tabela reativa.
+  renderABCTable(sorted);
+  // KPI cards clicáveis filtram tabela
+  $$('[data-abc-filter]').forEach(k => k.onclick = () => {
+    const sel = document.querySelector('[data-abc-class]');
+    if (sel) { sel.value = k.dataset.abcFilter; sel.dispatchEvent(new Event('change')); }
+  });
+  const classSel = document.querySelector('[data-abc-class]');
+  if (classSel) classSel.onchange = () => renderABCTable(sorted);
+  const search = document.querySelector('[data-table-search]');
+  if (search) search.oninput = () => renderABCTable(sorted);
+  attachSortable('#abc-table', () => renderABCTable(sorted));
+}
+
+function renderABCTable(sortedAll) {
+  const level = State.rules.abcNivel || 'referencia';
+  const tbody = document.getElementById('abc-tbody'); if (!tbody) return;
+  const classSel = document.querySelector('[data-abc-class]');
+  const search = document.querySelector('[data-table-search]');
+  const cls = classSel?.value || 'all';
+  const q = (search?.value || '').toLowerCase().trim();
+  let rows = sortedAll;
+  if (cls !== 'all') rows = rows.filter(i => i.abc === cls);
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#abc-table');
+  // limita render para performance (mas permite todas via scroll)
+  const html = rows.slice(0, 500).map(i => `<tr data-sku="${i.barcode||i._key}">
+    <td>${pill(i.abc, i.abc.toLowerCase())}</td>
+    <td class="strong">${truncar(level==='referencia'? (i.referencia||i.produto) : i.produto, 44)}</td>
+    ${level==='barcode'?`<td>${i.cor||''}</td><td>${i.tamanho||''}</td>`:''}
+    ${level==='codVendas'?`<td>${i.cor||''}</td>`:''}
+    <td class="num">${fmtNum(i.vendasPeriodo)}</td>
+    <td class="num">${fmtBRL(i.receitaPeriodo)}</td>
+    <td class="num">${fmtNum(i.estoque)}</td>
+    <td class="num">${i.pctAcum?i.pctAcum.toFixed(1)+'%':'—'}</td>
+    <td>${i.bestseller ? pill('BEST','best') : ''}</td>
+  </tr>`).join('');
+  tbody.innerHTML = html || `<tr><td colspan="9" class="empty">Nenhum item corresponde ao filtro</td></tr>`;
+  attachRowClick(tbody);
+}
+
+/* ============== ENVELHECIMENTO ============== */
+function viewEnvelhecimento() {
+  if (!hasData()) return emptyState();
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.estoque > 0);
+  const r = State.rules;
+  const comClassif = items.map(i => ({ ...i, envClass: classifyEnvelhecimento(i.diasSemVenda) }));
+  const ok = comClassif.filter(i => i.envClass === 'ok').length;
+  const alerta = comClassif.filter(i => i.envClass === 'alerta').length;
+  const promo = comClassif.filter(i => i.envClass === 'promo').length;
+  const queima = comClassif.filter(i => i.envClass === 'queima').length;
+  const semVenda = comClassif.filter(i => i.envClass === 'sem-venda').length;
+
+  const consolidado = State.filters.empresa === 'all';
+  // Guardamos TODOS ordenados por dias sem venda (pior primeiro) para tabela interativa
+  State._envAllRows = [...comClassif].sort((a,b) => (b.diasSemVenda||999) - (a.diasSemVenda||999));
+
+  return `
+    <div class="intro">
+      <div><h2>Envelhecimento do Estoque</h2>
+      <p>Quanto tempo cada SKU está sem girar. ≥ <strong>${r.envAlerta}d</strong> = alerta | ≥ <strong>${r.envPromo}d</strong> = promoção | ≥ <strong>${r.envQueima}d</strong> = queima/outlet.</p></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi ok" data-env-filter="ok" style="cursor:pointer"><div class="label">OK</div><div class="value">${fmtNum(ok)}</div><div class="hint">&lt; ${r.envAlerta}d</div></div>
+      <div class="kpi warn" data-env-filter="alerta" style="cursor:pointer"><div class="label">Alerta</div><div class="value">${fmtNum(alerta)}</div><div class="hint">${r.envAlerta}-${r.envPromo-1}d</div></div>
+      <div class="kpi bad" data-env-filter="promo" style="cursor:pointer"><div class="label">Promoção</div><div class="value">${fmtNum(promo)}</div><div class="hint">${r.envPromo}-${r.envQueima-1}d</div></div>
+      <div class="kpi bad" data-env-filter="queima" style="cursor:pointer"><div class="label">Queima/Outlet</div><div class="value">${fmtNum(queima)}</div><div class="hint">≥ ${r.envQueima}d</div></div>
+      <div class="kpi" data-env-filter="sem-venda" style="cursor:pointer"><div class="label">Nunca venderam</div><div class="value">${fmtNum(semVenda)}</div></div>
+    </div>
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Distribuição por faixa</h3></div>
+        <div class="chart-wrap"><canvas id="envDist"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Encalhados por categoria</h3></div>
+        <div class="chart-wrap"><canvas id="envCat"></canvas></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>SKUs por envelhecimento</h3>
+        <div class="actions">
+          <select data-env-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="acionavel">Acionáveis (tudo fora do OK)</option>
+            <option value="all">Todos</option>
+            <option value="ok">OK</option>
+            <option value="alerta">Alerta</option>
+            <option value="promo">Promoção</option>
+            <option value="queima">Queima/Outlet</option>
+            <option value="sem-venda">Nunca venderam</option>
+          </select>
+          <input type="search" data-table-search placeholder="Buscar produto/cor..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+          <button class="btn" onclick="exportTableCSV('env-table','envelhecimento')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:520px;overflow-y:auto">
+        <table id="env-table" class="sortable">
+          <thead><tr>
+            <th data-sort="produto">Produto</th>
+            <th data-sort="cor">Cor</th>
+            <th data-sort="tamanho">Tam</th>
+            ${consolidado?'':'<th data-sort="empresa">Loja</th>'}
+            <th class="num" data-sort="estoque">Estoque</th>
+            <th class="num" data-sort="diasSemVenda">Sem venda</th>
+            <th data-sort="lastSale">Última venda</th>
+            <th>Ação</th>
+          </tr></thead>
+          <tbody id="env-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewEnvelhecimentoCharts() {
+  const items = enrich(viewItems('referencia'), State.filters.periodo).filter(i => i.estoque > 0);
+  const r = State.rules;
+  const bins = [{lbl:'0-30d',max:30,color:'#059669'},{lbl:'30-60d',max:60,color:'#65a30d'},
+                {lbl:`${r.envAlerta}-${r.envPromo}d`,max:r.envPromo,color:'#d97706'},
+                {lbl:`${r.envPromo}-${r.envQueima}d`,max:r.envQueima,color:'#ea580c'},
+                {lbl:`${r.envQueima}+d`,max:99999,color:'#dc2626'},
+                {lbl:'Nunca',max:-1,color:'#71717a'}];
+  const counts = new Array(bins.length).fill(0);
+  items.forEach(i => {
+    const d = i.diasSemVenda;
+    if (d == null) { counts[counts.length-1]++; return; }
+    for (let j=0; j<bins.length-1; j++) if (d < bins[j].max) { counts[j]++; return; }
+  });
+  chart('envDist', {
+    type:'bar',
+    data:{ labels: bins.map(b => b.lbl), datasets:[{ data: counts, backgroundColor: bins.map(b => b.color) }] },
+    options:{ plugins:{ legend:{display:false} }, scales:{ y:{ title:{display:true,text:'Nº de SKUs'} } } }
+  });
+  const byCat = {};
+  items.forEach(i => {
+    if (i.diasSemVenda == null || i.diasSemVenda < r.envAlerta) return;
+    byCat[i.grupo] = (byCat[i.grupo]||0) + 1;
+  });
+  const data = Object.entries(byCat).sort((a,b) => b[1]-a[1]).slice(0,12);
+  chart('envCat', {
+    type:'bar',
+    data:{ labels: data.map(d => d[0]||'—'), datasets:[{ data: data.map(d => d[1]), backgroundColor:'#dc2626' }] },
+    options:{ indexAxis:'y', plugins:{ legend:{display:false} }, scales:{ x:{ title:{display:true,text:'Nº de SKUs encalhados'} } } }
+  });
+  renderEnvTable();
+  attachSortable('#env-table', renderEnvTable);
+  const envSel = document.querySelector('[data-env-class]');
+  if (envSel) envSel.onchange = renderEnvTable;
+  const search = document.querySelector('[data-table-search]');
+  if (search) search.oninput = renderEnvTable;
+  document.querySelectorAll('[data-env-filter]').forEach(el => {
+    el.onclick = () => {
+      const cls = el.getAttribute('data-env-filter');
+      const sel = document.querySelector('[data-env-class]');
+      if (sel) { sel.value = cls; renderEnvTable(); }
+    };
+  });
+}
+function renderEnvTable() {
+  const tbody = document.getElementById('env-tbody'); if (!tbody) return;
+  const consolidado = State.filters.empresa === 'all';
+  const sel = document.querySelector('[data-env-class]');
+  const q = (document.querySelector('[data-table-search]')?.value || '').toLowerCase().trim();
+  let rows = State._envAllRows || [];
+  const filtro = sel ? sel.value : 'acionavel';
+  if (filtro === 'acionavel') rows = rows.filter(i => i.envClass !== 'ok');
+  else if (filtro !== 'all') rows = rows.filter(i => i.envClass === filtro);
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#env-table');
+  const labelMap = { 'queima':'QUEIMA/OUTLET','promo':'PROMOÇÃO','alerta':'ALERTA','sem-venda':'SEM VENDA','ok':'OK' };
+  tbody.innerHTML = rows.slice(0,500).map(i => {
+    const cls = i.envClass;
+    const pillCls = cls==='queima'?'bad':cls==='promo'?'bad':cls==='alerta'?'warn':cls==='ok'?'ok':'neutral';
+    return `<tr data-sku="${i.barcode||i._key}">
+      <td class="strong">${truncar(i.produto)}</td>
+      <td>${i.corLabel||i.cor||''}</td>
+      <td>${i.tamanhoLabel||i.tamanho||''}</td>
+      ${consolidado?'':`<td>${(i.empresa||'').replace('TVB ','')}</td>`}
+      <td class="num">${fmtNum(i.estoque)}</td>
+      <td class="num">${i.diasSemVenda!=null ? fmtNum(i.diasSemVenda)+'d' : 'nunca'}</td>
+      <td class="num">${i.lastSale ? i.lastSale.toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${pill(labelMap[cls], pillCls)}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${consolidado?7:8}" class="empty">Nenhum SKU corresponde</td></tr>`;
+  attachRowClick(tbody);
+}
+
+/* ============== RUPTURA ============== */
+function viewRuptura() {
+  if (!hasData()) return emptyState();
+  const r = State.rules;
+  const items = enrich(viewItems('referencia'), State.filters.periodo);
+  // Classificação ABC pela mesma janela de consolidação — keys casam 1:1
+  const classified = classifyABC(items);
+  const abcByKey = new Map();
+  classified.forEach(c => abcByKey.set(c._key || (c.barcode+'||'+c.empresa+'||'+c.armazenador), c.abc));
+  const itemsWithABC = items.map(i => ({ ...i, abc: abcByKey.get(i._key || (i.barcode+'||'+i.empresa+'||'+i.armazenador)) || 'C' }));
+
+  const rupturas = itemsWithABC.filter(i => i.ruptura);
+  const esgotadosAntigos = itemsWithABC.filter(i => i.estoque === 0 && (i.diasSemVenda == null || i.diasSemVenda > r.rupturaDiasVenda));
+  const preRuptura = itemsWithABC.filter(i => i.estoque > 0 && i.cobertura != null && i.cobertura !== Infinity && i.cobertura < r.cobBaixa && i.giro >= r.giroBaixo);
+  const rupturaA = rupturas.filter(i => i.abc === 'A');
+  const rupturaBest = rupturas.filter(i => i.bestseller);
+
+  const consolidado = State.filters.empresa === 'all';
+  State._rupAllRows = [...rupturas].sort((a,b) => (b.vendasTotalQty||0) - (a.vendasTotalQty||0));
+  State._preRupAllRows = [...preRuptura].sort((a,b) => (a.cobertura||999) - (b.cobertura||999));
+
+  return `
+    <div class="intro">
+      <div><h2>Ruptura de Estoque</h2>
+      <p>Regra: estoque = 0 <strong>E</strong> teve venda nos últimos <strong>${r.rupturaDiasVenda} dias</strong>. Isso separa ruptura real de SKU antigo esgotado.</p></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi bad" data-rup-filter="all" style="cursor:pointer"><div class="label">Ruptura real</div><div class="value">${fmtNum(rupturas.length)}</div><div class="hint">sem estoque com demanda ativa</div></div>
+      <div class="kpi bad" data-rup-filter="A" style="cursor:pointer"><div class="label">Ruptura Classe A</div><div class="value">${fmtNum(rupturaA.length)}</div><div class="hint">top 50% receita</div></div>
+      <div class="kpi warn" data-rup-filter="best" style="cursor:pointer"><div class="label">Ruptura BESTSELLER</div><div class="value">${fmtNum(rupturaBest.length)}</div></div>
+      <div class="kpi warn"><div class="label">Pré-ruptura</div><div class="value">${fmtNum(preRuptura.length)}</div><div class="hint">cobertura &lt; ${r.cobBaixa}d e girando</div></div>
+      <div class="kpi"><div class="label">Esgotados antigos</div><div class="value">${fmtNum(esgotadosAntigos.length)}</div><div class="hint">provavelmente fora de linha</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>SKUs em ruptura (agir agora)</h3>
+        <div class="actions">
+          <select data-rup-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="all">Todas</option>
+            <option value="A">Só Classe A</option>
+            <option value="B">Só Classe B</option>
+            <option value="C">Só Classe C</option>
+            <option value="best">Só Bestseller</option>
+            <option value="urgente">Urgentes (A ou best)</option>
+          </select>
+          <input type="search" data-rup-search placeholder="Buscar produto/cor..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+          <button class="btn" onclick="exportTableCSV('rup-table','rupturas')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:500px;overflow-y:auto">
+        <table id="rup-table" class="sortable">
+          <thead><tr>
+            <th data-sort="produto">Produto</th>
+            <th data-sort="cor">Cor</th>
+            <th data-sort="tamanho">Tam</th>
+            ${consolidado?'':'<th data-sort="empresa">Loja</th>'}
+            <th data-sort="abc">ABC</th>
+            <th class="num" data-sort="vendasTotalQty">Total vendas</th>
+            <th data-sort="lastSale">Última venda</th>
+            <th>Urgência</th>
+          </tr></thead>
+          <tbody id="rup-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Pré-ruptura — agir antes de faltar</h3>
+        <div class="actions">
+          <input type="search" data-prerup-search placeholder="Buscar produto/cor..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+          <button class="btn" onclick="exportTableCSV('prerup-table','pre_ruptura')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto">
+        <table id="prerup-table" class="sortable">
+          <thead><tr>
+            <th data-sort="produto">Produto</th>
+            <th data-sort="cor">Cor</th>
+            <th data-sort="tamanho">Tam</th>
+            ${consolidado?'':'<th data-sort="empresa">Loja</th>'}
+            <th class="num" data-sort="estoque">Estoque</th>
+            <th class="num" data-sort="cobertura">Cobertura</th>
+            <th class="num" data-sort="giro">Giro</th>
+          </tr></thead>
+          <tbody id="prerup-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewRupturaCharts(){
+  renderRupTable();
+  attachSortable('#rup-table', renderRupTable);
+  const rupSel = document.querySelector('[data-rup-class]');
+  if (rupSel) rupSel.onchange = renderRupTable;
+  const rupSearch = document.querySelector('[data-rup-search]');
+  if (rupSearch) rupSearch.oninput = renderRupTable;
+  document.querySelectorAll('[data-rup-filter]').forEach(el => {
+    el.onclick = () => {
+      const f = el.getAttribute('data-rup-filter');
+      const sel = document.querySelector('[data-rup-class]');
+      if (sel) { sel.value = f; renderRupTable(); }
+    };
+  });
+  renderPreRupTable();
+  attachSortable('#prerup-table', renderPreRupTable);
+  const preSearch = document.querySelector('[data-prerup-search]');
+  if (preSearch) preSearch.oninput = renderPreRupTable;
+}
+function renderRupTable() {
+  const tbody = document.getElementById('rup-tbody'); if (!tbody) return;
+  const consolidado = State.filters.empresa === 'all';
+  const sel = document.querySelector('[data-rup-class]');
+  const q = (document.querySelector('[data-rup-search]')?.value || '').toLowerCase().trim();
+  let rows = State._rupAllRows || [];
+  if (sel && sel.value !== 'all') {
+    const v = sel.value;
+    if (v === 'best') rows = rows.filter(i => i.bestseller);
+    else if (v === 'urgente') rows = rows.filter(i => i.bestseller || i.abc === 'A');
+    else rows = rows.filter(i => i.abc === v);
+  }
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#rup-table');
+  tbody.innerHTML = rows.slice(0,500).map(i => {
+    const urgente = i.bestseller || i.abc === 'A';
+    return `<tr data-sku="${i.barcode||i._key}">
+      <td class="strong">${truncar(i.produto)}</td>
+      <td>${i.corLabel||i.cor||''}</td>
+      <td>${i.tamanhoLabel||i.tamanho||''}</td>
+      ${consolidado?'':`<td>${(i.empresa||'').replace('TVB ','')}</td>`}
+      <td>${pill(i.abc||'C', i.abc==='A'?'bad':i.abc==='B'?'warn':'neutral')}</td>
+      <td class="num">${fmtNum(i.vendasTotalQty)}</td>
+      <td class="num">${i.lastSale ? i.lastSale.toLocaleDateString('pt-BR') : '—'}</td>
+      <td>${pill(urgente?'URGENTE':'REABASTECER', urgente?'bad':'warn')}${i.bestseller?' '+pill('BEST','best'):''}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="${consolidado?7:8}" class="empty">Nenhuma ruptura corresponde</td></tr>`;
+  attachRowClick(tbody);
+}
+function renderPreRupTable() {
+  const tbody = document.getElementById('prerup-tbody'); if (!tbody) return;
+  const consolidado = State.filters.empresa === 'all';
+  const q = (document.querySelector('[data-prerup-search]')?.value || '').toLowerCase().trim();
+  let rows = State._preRupAllRows || [];
+  if (q) rows = rows.filter(i =>
+    (i.produto||'').toLowerCase().includes(q) ||
+    (i.cor||'').toLowerCase().includes(q) ||
+    (i.referencia||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#prerup-table');
+  tbody.innerHTML = rows.slice(0,300).map(i => `<tr data-sku="${i.barcode||i._key}">
+    <td class="strong">${truncar(i.produto)}</td>
+    <td>${i.corLabel||i.cor||''}</td>
+    <td>${i.tamanhoLabel||i.tamanho||''}</td>
+    ${consolidado?'':`<td>${(i.empresa||'').replace('TVB ','')}</td>`}
+    <td class="num">${fmtNum(i.estoque)}</td>
+    <td class="num">${fmtNum(i.cobertura,1)}d</td>
+    <td class="num">${i.giro?fmtNum(i.giro,1)+'x':'—'}</td>
+  </tr>`).join('') || `<tr><td colspan="${consolidado?6:7}" class="empty">Nenhum</td></tr>`;
+  attachRowClick(tbody);
+}
+
+/* ============== SUGESTÕES ============== */
+function viewSugestoes() {
+  if (!hasData()) return emptyState();
+  const r = State.rules;
+  const items = enrich(viewItems('referencia'), State.filters.periodo);
+  const classified = classifyABC(items);
+  const abcByKey = new Map();
+  classified.forEach(c => abcByKey.set(c._key || (c.barcode+'||'+c.empresa+'||'+c.armazenador), c.abc));
+  const keyOf = it => it._key || (it.barcode+'||'+it.empresa+'||'+it.armazenador);
+
+  const sugestoes = [];
+  items.forEach(i => {
+    const abc = abcByKey.get(keyOf(i)) || 'C';
+    const idade = i.diasSemVenda;
+    const empresaLbl = (i.empresa||'').replace('TVB ','') || 'Rede';
+    const tituloBase = `${i.produto||''} ${i.cor?('• '+i.cor):''} ${i.tamanho||''}`.trim();
+    const skuKey = i.barcode || i._key;
+    if (i.estoque > 0 && idade != null && idade >= r.envQueima) {
+      sugestoes.push({ acao:'QUEIMA/OUTLET', type:'act-outlet', sku:skuKey, abc,
+        titulo:tituloBase, empresa:empresaLbl,
+        sub:`${empresaLbl} • Estoque: ${i.estoque} pç`,
+        motivo:`Sem venda há ${idade} dias (limite queima = ${r.envQueima}d). Remover da loja e mandar pro outlet.`,
+        sort: idade * 1000 });
+    } else if (i.estoque > 0 && idade != null && idade >= r.envPromo) {
+      sugestoes.push({ acao:'PROMOÇÃO', type:'act-promo', sku:skuKey, abc,
+        titulo:tituloBase, empresa:empresaLbl,
+        sub:`${empresaLbl} • Estoque: ${i.estoque} pç`,
+        motivo:`${idade} dias sem venda. Aplicar desconto pra girar antes de virar queima.`,
+        sort: idade * 500 });
+    }
+    if (i.estoque > 0 && i.cobertura != null && i.cobertura !== Infinity && i.cobertura < r.reabCobertura && i.giro >= r.reabGiroMin) {
+      sugestoes.push({ acao:'REABASTECER', type:'act-rep', sku:skuKey, abc,
+        titulo:tituloBase, empresa:empresaLbl,
+        sub:`${empresaLbl} • Estoque: ${i.estoque} pç • Giro ${fmtNum(i.giro,1)}x`,
+        motivo:`Cobertura só ${fmtNum(i.cobertura,1)}d (limite ${r.reabCobertura}d) e giro alto (${fmtNum(i.giro,1)}x ≥ ${r.reabGiroMin}x). Pedir reposição.`,
+        sort: 900000 + (i.receitaPeriodo||0) });
+    }
+    if (i.ruptura) {
+      const urgente = i.bestseller || abc === 'A';
+      sugestoes.push({ acao: urgente?'RUPTURA URGENTE':'RUPTURA', type:'act-rep', sku:skuKey, abc,
+        titulo:tituloBase, empresa:empresaLbl,
+        sub:`${empresaLbl} • Vendeu ${fmtNum(i.vendasTotalQty)} pç total`,
+        motivo:`Estoque zerado e teve venda nos últimos ${r.rupturaDiasVenda}d. ${urgente?'Classe A ou bestseller — prioridade máxima.':'Reabastecer.'}`,
+        sort: 1200000 + (i.vendasTotalQty||0) + (urgente?500000:0) });
+    }
+    if (i.produzido > 0) {
+      const st = i.vendasTotalQty / i.produzido;
+      if (st >= 0.85 && i.estoque < i.produzido * 0.1) {
+        sugestoes.push({ acao:'PRODUZIR +', type:'act-prod', sku:skuKey, abc,
+          titulo:tituloBase, empresa:empresaLbl,
+          sub:`Produzido: ${i.produzido} • Vendido: ${i.vendasTotalQty} • Estoque: ${i.estoque}`,
+          motivo:`Sell-through de ${fmtPct(st)} e estoque quase esgotado. Produzir próxima leva.`,
+          sort: 800000 + i.vendasTotalQty });
+      }
+    }
+  });
+  const seen = new Set();
+  const unique = sugestoes.filter(s => { const k = s.acao+'|'+s.titulo+'|'+s.sub; if (seen.has(k)) return false; seen.add(k); return true; })
+    .sort((a,b) => b.sort - a.sort);
+  State._sugAllRows = unique;
+
+  const byAcao = {}; unique.forEach(s => { (byAcao[s.acao] = byAcao[s.acao]||[]).push(s); });
+  const ordem = ['RUPTURA URGENTE','RUPTURA','REABASTECER','PRODUZIR +','PROMOÇÃO','QUEIMA/OUTLET'];
+  const tipoCls = { 'RUPTURA URGENTE':'bad','RUPTURA':'bad','REABASTECER':'warn','PRODUZIR +':'info','PROMOÇÃO':'warn','QUEIMA/OUTLET':'bad' };
+  const kpiCards = ordem.filter(a => byAcao[a]).map(a => {
+    const n = byAcao[a].length;
+    const cls = tipoCls[a] || 'neutral';
+    return `<div class="kpi ${cls}" data-sug-filter="${a}" style="cursor:pointer">
+      <div class="label">${a}</div>
+      <div class="value">${fmtNum(n)}</div>
+      <div class="hint">clique pra filtrar</div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="intro">
+      <div><h2>Sugestões automáticas</h2>
+      <p>Ações geradas a partir das regras que você definiu. <strong>${fmtNum(unique.length)}</strong> sugestões no total. Regras editáveis em <strong>Regras</strong>. Clique num card pra filtrar ou numa linha pra abrir o SKU.</p></div>
+    </div>
+    ${unique.length === 0 ? '<div class="empty">Nenhuma sugestão — tudo sob controle.</div>' : `
+    <div class="kpi-grid">${kpiCards}</div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Todas as sugestões</h3>
+        <div class="actions">
+          <select data-sug-class style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            <option value="all">Todas as ações</option>
+            ${ordem.filter(a => byAcao[a]).map(a => `<option value="${a}">${a} (${byAcao[a].length})</option>`).join('')}
+          </select>
+          <input type="search" data-sug-search placeholder="Buscar produto/cor/loja..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:220px">
+          <button class="btn" onclick="exportTableCSV('sug-table','sugestoes')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:560px;overflow-y:auto">
+        <table id="sug-table" class="sortable">
+          <thead><tr>
+            <th data-sort="acao">Ação</th>
+            <th data-sort="titulo">Produto</th>
+            <th data-sort="empresa">Loja</th>
+            <th data-sort="abc">ABC</th>
+            <th>Motivo</th>
+          </tr></thead>
+          <tbody id="sug-tbody"></tbody>
+        </table>
+      </div>
+    </div>`}`;
+}
+function viewSugestoesCharts(){
+  if (!document.getElementById('sug-tbody')) return;
+  renderSugTable();
+  attachSortable('#sug-table', renderSugTable);
+  const sel = document.querySelector('[data-sug-class]');
+  if (sel) sel.onchange = renderSugTable;
+  const search = document.querySelector('[data-sug-search]');
+  if (search) search.oninput = renderSugTable;
+  document.querySelectorAll('[data-sug-filter]').forEach(el => {
+    el.onclick = () => {
+      const f = el.getAttribute('data-sug-filter');
+      const s = document.querySelector('[data-sug-class]');
+      if (s) { s.value = f; renderSugTable(); }
+    };
+  });
+}
+function renderSugTable() {
+  const tbody = document.getElementById('sug-tbody'); if (!tbody) return;
+  const sel = document.querySelector('[data-sug-class]');
+  const q = (document.querySelector('[data-sug-search]')?.value || '').toLowerCase().trim();
+  let rows = State._sugAllRows || [];
+  if (sel && sel.value !== 'all') rows = rows.filter(s => s.acao === sel.value);
+  if (q) rows = rows.filter(s =>
+    (s.titulo||'').toLowerCase().includes(q) ||
+    (s.empresa||'').toLowerCase().includes(q) ||
+    (s.acao||'').toLowerCase().includes(q)
+  );
+  rows = applySort(rows, '#sug-table');
+  const tipoCls = { 'RUPTURA URGENTE':'bad','RUPTURA':'bad','REABASTECER':'warn','PRODUZIR +':'neutral','PROMOÇÃO':'warn','QUEIMA/OUTLET':'bad' };
+  tbody.innerHTML = rows.slice(0,600).map(s => `<tr data-sku="${s.sku||''}">
+    <td>${pill(s.acao, tipoCls[s.acao]||'neutral')}</td>
+    <td class="strong">${truncar(s.titulo, 60)}</td>
+    <td>${s.empresa||''}</td>
+    <td>${pill(s.abc||'C', s.abc==='A'?'bad':s.abc==='B'?'warn':'neutral')}</td>
+    <td class="muted" style="font-size:12px">${s.motivo}</td>
+  </tr>`).join('') || '<tr><td colspan="5" class="empty">Nenhuma sugestão corresponde</td></tr>';
+  attachRowClick(tbody);
+}
+
+/* ============== HISTÓRICO 2025 ============== */
+function viewHistorico() {
+  const h = State.raw.historico;
+  if (!h.length) {
+    return `<div class="intro"><div><h2>Histórico 2025</h2>
+      <p>Esta aba consome os relatórios agregados do PowerBI (<em>vendas 2025 leblon por familia.xlsx</em>, <em>vendas 2025 rio sul por familia.xlsx</em>). Faça upload na aba <strong>Dados</strong>.</p></div></div>
+      <div class="empty">Nenhum dado histórico carregado. Vá para Dados e envie os arquivos por família.</div>`;
+  }
+  const lojas = [...new Set(h.map(x => x.loja))];
+  const meses = [...new Set(h.map(x => x.mes))];
+  const familias = [...new Set(h.map(x => x.familia))].sort();
+  const totalReceita = sum(h, x => x.receita);
+  const totalQtd = sum(h, x => x.quantidade);
+  // Pivot família -> mes -> receita (agregando todas as lojas)
+  const pivot = {};
+  h.forEach(x => {
+    pivot[x.familia] = pivot[x.familia] || {};
+    pivot[x.familia][x.mes] = (pivot[x.familia][x.mes] || 0) + x.receita;
+  });
+  // Rows achatadas — uma por família, colunas por mês
+  const allRows = familias.map(f => {
+    const row = { familia: f, _total: 0 };
+    meses.forEach(m => {
+      row[m] = pivot[f][m] || 0;
+      row._total += row[m];
+    });
+    return row;
+  });
+  State._histAllRows = allRows;
+  State._histMeses = meses;
+
+  const lojaOpts = ['all', ...lojas].map(l => `<option value="${l}">${l==='all'?'Todas as lojas':l}</option>`).join('');
+
+  return `
+    <div class="intro">
+      <div><h2>Histórico 2025 (Leblon + Rio Sul)</h2>
+      <p>Relatórios agregados por família e mês. Clique em célula pra isolar o pico. Filtre por loja pra comparar.</p></div>
+    </div>
+    <div class="kpi-grid">
+      <div class="kpi info"><div class="label">Receita histórica</div><div class="value">${fmtBRL(totalReceita)}</div></div>
+      <div class="kpi"><div class="label">Peças vendidas</div><div class="value">${fmtNum(totalQtd)}</div></div>
+      <div class="kpi"><div class="label">Lojas</div><div class="value">${lojas.length}</div><div class="hint">${lojas.join(', ')}</div></div>
+      <div class="kpi"><div class="label">Categorias</div><div class="value">${familias.length}</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Receita mensal por categoria (empilhado)</h3>
+        <div class="actions">
+          <select data-hist-loja style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px">
+            ${lojaOpts}
+          </select>
+        </div>
+      </div>
+      <div class="chart-wrap lg"><canvas id="histChart"></canvas></div>
+    </div>
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Tabela: família × mês (R$)</h3>
+        <div class="actions">
+          <input type="search" data-hist-search placeholder="Buscar família..." style="padding:6px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;min-width:200px">
+          <button class="btn" onclick="exportTableCSV('hist-table','historico_2025')">↓ CSV</button>
+        </div>
+      </div>
+      <div class="table-wrap" style="max-height:500px;overflow-y:auto">
+        <table id="hist-table" class="sortable">
+          <thead><tr>
+            <th data-sort="familia">Família</th>
+            ${meses.map(m => `<th class="num" data-sort="${m}">${m}</th>`).join('')}
+            <th class="num" data-sort="_total">Total</th>
+          </tr></thead>
+          <tbody id="hist-tbody"></tbody>
+        </table>
+      </div>
+    </div>`;
+}
+function viewHistoricoCharts() {
+  const h = State.raw.historico; if (!h.length) return;
+  const render = () => {
+    const sel = document.querySelector('[data-hist-loja]');
+    const lojaFiltro = sel ? sel.value : 'all';
+    const dados = lojaFiltro === 'all' ? h : h.filter(x => x.loja === lojaFiltro);
+    const meses = [...new Set(dados.map(x => x.mes))];
+    const totFam = {};
+    dados.forEach(x => totFam[x.familia] = (totFam[x.familia]||0) + x.receita);
+    const topFam = Object.entries(totFam).sort((a,b) => b[1]-a[1]).slice(0,8).map(x => x[0]);
+    const colors = ['#18181b','#059669','#4f46e5','#d97706','#dc2626','#8b5cf6','#0891b2','#84cc16'];
+    const datasets = topFam.map((f, i) => ({
+      label: f,
+      data: meses.map(m => sum(dados.filter(x => x.familia===f && x.mes===m), x => x.receita)),
+      backgroundColor: colors[i] + 'e6',
+      stack: 'a'
+    }));
+    chart('histChart', {
+      type:'bar',
+      data: { labels: meses, datasets },
+      options: { plugins:{ legend:{ position:'bottom' } }, scales:{ x:{ stacked:true }, y:{ stacked:true, ticks:{ callback: v => 'R$'+(v/1000).toFixed(0)+'k' } } } }
+    });
+  };
+  render();
+  const sel = document.querySelector('[data-hist-loja]');
+  if (sel) sel.onchange = render;
+  renderHistTable();
+  attachSortable('#hist-table', renderHistTable);
+  const search = document.querySelector('[data-hist-search]');
+  if (search) search.oninput = renderHistTable;
+}
+function renderHistTable() {
+  const tbody = document.getElementById('hist-tbody'); if (!tbody) return;
+  const q = (document.querySelector('[data-hist-search]')?.value || '').toLowerCase().trim();
+  const meses = State._histMeses || [];
+  let rows = State._histAllRows || [];
+  if (q) rows = rows.filter(r => (r.familia||'').toLowerCase().includes(q));
+  rows = applySort(rows, '#hist-table');
+  tbody.innerHTML = rows.map(r => {
+    const tds = meses.map(m => `<td class="num">${r[m] ? fmtBRL(r[m]) : '—'}</td>`).join('');
+    return `<tr><td class="strong">${r.familia}</td>${tds}<td class="num strong">${fmtBRL(r._total)}</td></tr>`;
+  }).join('') || `<tr><td colspan="${meses.length+2}" class="empty">Nenhuma família corresponde</td></tr>`;
+}
+
+/* ============== REGRAS (editar thresholds) ============== */
+function viewRegras() {
+  const r = State.rules;
+  const row = (key, label, help, suffix='') => `
+    <div style="display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #f4f4f5">
+      <div>
+        <div style="font-weight:600;color:#18181b;font-size:13px">${label}</div>
+        <div style="font-size:12px;color:#71717a;margin-top:2px">${help}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <input type="number" step="${key==='abcA'||key==='abcB'||key.startsWith('giro')?'0.1':'1'}" data-rule="${key}" value="${r[key]}"
+          style="width:80px;padding:7px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:13px;font-family:inherit;text-align:right">
+        <span style="font-size:12px;color:#71717a;min-width:28px">${suffix}</span>
+      </div>
+    </div>`;
+
+  return `
+    <div class="intro">
+      <div><h2>Regras de análise</h2>
+      <p>Edite os parâmetros aqui e a ferramenta recalcula tudo na hora. Todas as regras aqui foram co-definidas com você — mude à vontade, é assim que vamos afinar.</p></div>
+      <div class="actions">
+        <button class="btn" id="rulesReset">Restaurar padrão</button>
+        <button class="btn primary" id="rulesSave">Aplicar</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Curva ABC</h3></div>
+        <div style="background:#fafafa;border:1px solid #f4f4f5;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#52525b">
+          A TVB usa <strong>50/30/20</strong> (A = 50% do faturamento, B = 30%, C = 20% restantes). Os campos abaixo são os <em>cortes acumulados</em>: abcA=50 significa "A vai até 50%"; abcB=80 significa "B vai até 80% (50+30)".
+        </div>
+        ${row('abcA','Classe A — corte acumulado (até X%)','A TVB: 50%.','%')}
+        ${row('abcB','Classe B — corte acumulado (até X%)','A TVB: 80% (= 50% da A + 30% da B).','%')}
+        <div style="display:grid;grid-template-columns:1fr 140px;gap:12px;align-items:center;padding:10px 0;border-top:1px solid #f4f4f5;margin-top:8px">
+          <div>
+            <div style="font-weight:600;color:#18181b;font-size:13px">Nível de agregação da ABC</div>
+            <div style="font-size:12px;color:#71717a;margin-top:2px">Por qual nível a curva deve classificar os produtos. Padrão: por referência (modelo).</div>
+          </div>
+          <select data-rule="abcNivel" style="padding:7px 10px;border:1px solid #e4e4e7;border-radius:7px;font-size:12px;font-family:inherit">
+            <option value="referencia" ${r.abcNivel==='referencia'?'selected':''}>Por referência (modelo)</option>
+            <option value="codVendas" ${r.abcNivel==='codVendas'?'selected':''}>Por modelo + cor</option>
+            <option value="barcode" ${r.abcNivel==='barcode'?'selected':''}>Por SKU (modelo+cor+tam)</option>
+          </select>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Envelhecimento</h3></div>
+        ${row('envAlerta','Dias pra entrar em ALERTA','Produto sem venda por esse tempo começa a aparecer no radar.','d')}
+        ${row('envPromo','Dias pra sugerir PROMOÇÃO','Acima disso, o sistema já recomenda aplicar desconto.','d')}
+        ${row('envQueima','Dias pra ir pra QUEIMA/OUTLET','Acima disso, sugere remover da loja.','d')}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Cobertura de estoque</h3></div>
+        ${row('cobBaixa','Cobertura BAIXA (abaixo de)','Abaixo desse valor é risco de ruptura.','d')}
+        ${row('cobAlta','Cobertura EXCESSIVA (acima de)','Acima = capital parado demais.','d')}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Giro</h3></div>
+        ${row('giroAlto','Giro ALTO (≥)','Giro anualizado a partir desse valor.','x')}
+        ${row('giroBaixo','Giro BAIXO (≤)','Giro anualizado abaixo desse valor.','x')}
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-head"><h3>Ruptura</h3></div>
+        ${row('rupturaDiasVenda','Ruptura real = estoque 0 + venda nos últimos X dias','Separa ruptura real de SKU antigo esgotado.','d')}
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Reabastecimento automático</h3></div>
+        ${row('reabCobertura','Sugerir reabastecer quando cobertura < X','Abaixo desse limite o sistema alerta.','d')}
+        ${row('reabGiroMin','...E giro for ≥ X','Só alerta se o SKU também estiver girando bem.','x')}
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><h3>Sugestões extras</h3></div>
+      <div style="display:grid;grid-template-columns:1fr 120px;gap:12px;align-items:center;padding:10px 0">
+        <div>
+          <div style="font-weight:600;color:#18181b;font-size:13px">Sugerir transferência entre lojas</div>
+          <div style="font-size:12px;color:#71717a;margin-top:2px">Desativado por padrão. Quando ligar, o sistema sugere mover produto de loja com excesso pra loja em ruptura.</div>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" data-rule="sugestaoTransfAtiva" ${r.sugestaoTransfAtiva?'checked':''} style="width:18px;height:18px">
+          <span style="font-size:12px;color:#71717a">Ativar</span>
+        </label>
+      </div>
+    </div>
+  `;
+}
+function viewRegrasCharts(){}
+
+/* ============== DADOS (upload) ============== */
+function viewDados() {
+  const s = (arr) => Array.isArray(arr) ? arr.length : (arr ? 1 : 0);
+  const linhas = {
+    estoque: State.raw.estoque.length,
+    vendas: State.raw.vendas.length,
+    produtos: State.raw.produtos.length,
+    ordens: State.raw.ordens.length,
+    devolucoes: State.raw.devolucoes.length,
+    historico: State.raw.historico.length
+  };
+  const snap = State.dataRefDate ? State.dataRefDate.toLocaleDateString('pt-BR') : '—';
+  const slot = (kind, title, desc, multi=false) => {
+    const count = linhas[kind];
+    return `<div class="upload-slot ${count?'has-file':''}" data-kind="${kind}">
+      <input type="file" accept=".xlsx,.xls,.csv" ${multi?'multiple':''}>
+      <div class="u-head">
+        <div>
+          <div class="u-title">${title}</div>
+          <div class="u-desc">${desc}</div>
+        </div>
+      </div>
+      <div class="u-status ${count?'':'empty'}">${count ? fmtNum(count)+' linhas carregadas' : 'Clique ou arraste um arquivo'}</div>
+    </div>`;
+  };
+  return `
+    <div class="intro">
+      <div><h2>Dados</h2>
+      <p>Faça upload das planilhas do PowerBI. Snapshot atual: <strong>${snap}</strong>. Você pode subir novas versões a qualquer momento — cada upload substitui o anterior (exceto vendas, que consolida múltiplos arquivos).</p></div>
+      <div class="actions">
+        <button class="btn" id="loadFromFolder">Carregar tudo da pasta TVB</button>
+      </div>
+    </div>
+    <h3 style="font-size:13px;color:#52525b;margin:18px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Obrigatórios</h3>
+    <div class="upload-grid">
+      ${slot('estoque','Estoque','ESTOQUE_POWER_BI.xlsx — quantidade por SKU em cada loja/CD')}
+      ${slot('vendas','Vendas (consolidado)','VENDAS_PARA_BI.xlsx — linha-a-linha. Pode enviar múltiplos arquivos.',true)}
+      ${slot('produtos','Produtos','Produtos DAPIC BI.xlsx — catálogo, bestseller flag')}
+      ${slot('ordens','Ordem de Produção','ORDEM_PRODUÇAO.xlsx — quanto foi produzido por SKU+tamanho')}
+    </div>
+    <h3 style="font-size:13px;color:#52525b;margin:18px 0 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px">Complementares</h3>
+    <div class="upload-grid">
+      ${slot('devolucoes','Devoluções','DEVOLUÇÃO_BI.xlsx — devoluções são subtraídas das vendas')}
+      ${slot('historico','Histórico 2025 (por família)','Os arquivos "vendas 2025 leblon/rio sul por familia" — contexto histórico. Múltiplos arquivos.',true)}
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <div class="panel-head"><h3>Status</h3></div>
+      <table>
+        <thead><tr><th>Fonte</th><th class="num">Linhas</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Estoque</td><td class="num">${fmtNum(linhas.estoque)}</td><td>${linhas.estoque?pill('OK','ok'):pill('VAZIO','neutral')}</td></tr>
+          <tr><td>Vendas</td><td class="num">${fmtNum(linhas.vendas)}</td><td>${linhas.vendas?pill('OK','ok'):pill('VAZIO','neutral')}</td></tr>
+          <tr><td>Produtos</td><td class="num">${fmtNum(linhas.produtos)}</td><td>${linhas.produtos?pill('OK','ok'):pill('VAZIO','neutral')}</td></tr>
+          <tr><td>Ordem de Produção</td><td class="num">${fmtNum(linhas.ordens)}</td><td>${linhas.ordens?pill('OK','ok'):pill('VAZIO','neutral')}</td></tr>
+          <tr><td>Devoluções</td><td class="num">${fmtNum(linhas.devolucoes)}</td><td>${linhas.devolucoes?pill('OK','ok'):pill('VAZIO','neutral')}</td></tr>
+          <tr><td>Histórico 2025</td><td class="num">${fmtNum(linhas.historico)}</td><td>${linhas.historico?pill('OK','ok'):pill('VAZIO','neutral')}</td></tr>
+        </tbody>
+      </table>
+    </div>`;
+}
+function viewDadosCharts(){}
+
+/* ============================================================
+ * DISPATCHER — escolhe qual view renderizar
+ * ============================================================ */
+const VIEWS = {
+  overview: { title:'Visão Geral', sub:'Panorama do estoque e vendas', render: viewOverview, after: viewOverviewCharts },
+  giro: { title:'Giro de Estoque', sub:'Quantas vezes o estoque gira no ano', render: viewGiro, after: viewGiroCharts },
+  cobertura: { title:'Cobertura', sub:'Dias de estoque restante vs. velocidade de venda', render: viewCobertura, after: viewCoberturaCharts },
+  sellthrough: { title:'Sell-through', sub:'Vendido ÷ Produzido (baseado em Ordem de Produção)', render: viewSellThrough, after: viewSellThroughCharts },
+  abc: { title:'Curva ABC', sub:'Classificação A/B/C por receita acumulada', render: viewABC, after: viewABCCharts },
+  envelhecimento: { title:'Envelhecimento', sub:'Tempo sem vender por SKU', render: viewEnvelhecimento, after: viewEnvelhecimentoCharts },
+  ruptura: { title:'Ruptura', sub:'Estoque zero com demanda ativa', render: viewRuptura, after: viewRupturaCharts },
+  sugestoes: { title:'Sugestões', sub:'Ações recomendadas a partir das regras', render: viewSugestoes, after: viewSugestoesCharts },
+  historico: { title:'Histórico 2025', sub:'Relatórios agregados por família e mês', render: viewHistorico, after: viewHistoricoCharts },
+  regras: { title:'Regras', sub:'Parâmetros editáveis — mude e tudo recalcula', render: viewRegras, after: viewRegrasCharts },
+  dados: { title:'Dados', sub:'Upload das planilhas do PowerBI', render: viewDados, after: viewDadosCharts }
+};
+
+function goto(view) {
+  State.currentView = view;
+  $$('aside nav button').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  render();
+}
+
+function render() {
+  const v = VIEWS[State.currentView] || VIEWS.overview;
+  $('#view-title').textContent = v.title;
+  $('#view-sub').textContent = v.sub;
+  $('#content').innerHTML = v.render();
+  // Charts precisam ser construídos DEPOIS do innerHTML (os canvas já existem)
+  requestAnimationFrame(() => { try { v.after(); } catch(e) { console.error(e); } });
+  // Ligar handlers específicos da view
+  attachViewHandlers();
+}
+
+function attachViewHandlers() {
+  // Uploads (na aba Dados)
+  $$('#content .upload-slot').forEach(slot => {
+    const inp = slot.querySelector('input[type=file]');
+    if (!inp) return;
+    inp.onchange = async (e) => {
+      const files = [...e.target.files];
+      if (!files.length) return;
+      await handleUploads(slot.dataset.kind, files);
+    };
+    slot.ondragover = e => { e.preventDefault(); slot.classList.add('dragover'); };
+    slot.ondragleave = () => slot.classList.remove('dragover');
+    slot.ondrop = async (e) => {
+      e.preventDefault(); slot.classList.remove('dragover');
+      const files = [...e.dataTransfer.files];
+      if (files.length) await handleUploads(slot.dataset.kind, files);
+    };
+  });
+  const loadFolder = $('#loadFromFolder');
+  if (loadFolder) loadFolder.onclick = () => toast('Arraste os arquivos para os slots acima. Upload direto da pasta só funciona no navegador do usuário.');
+
+  // Regras — inputs, selects e botões
+  $$('#content input[data-rule], #content select[data-rule]').forEach(inp => {
+    inp.onchange = () => {
+      const k = inp.dataset.rule;
+      if (inp.type === 'checkbox') State.rules[k] = inp.checked;
+      else if (inp.tagName === 'SELECT') State.rules[k] = inp.value;
+      else State.rules[k] = parseFloat(inp.value);
+    };
+  });
+  const rSave = $('#rulesSave');
+  if (rSave) rSave.onclick = () => { render(); toast('Regras aplicadas — mudanças refletem em todas as abas.'); };
+  const rReset = $('#rulesReset');
+  if (rReset) rReset.onclick = () => {
+    if (!confirm('Restaurar valores padrão?')) return;
+    State.rules = { ...DEFAULT_RULES };
+    render();
+    toast('Regras restauradas para o padrão.');
+  };
+}
+
+async function handleUploads(kind, files) {
+  try {
+    if (kind === 'vendas') {
+      // append
+      for (const f of files) {
+        const rows = await parseVendas(f);
+        State.raw.vendas = State.raw.vendas.concat(rows);
+      }
+    } else if (kind === 'historico') {
+      for (const f of files) {
+        const lojaGuess = f.name.toLowerCase().includes('leblon') ? 'TVB Leblon' :
+                          f.name.toLowerCase().includes('rio sul') ? 'TVB Rio Sul' : f.name;
+        const rows = await parseHistoricoFamilia(f, lojaGuess);
+        State.raw.historico = State.raw.historico.concat(rows);
+      }
+    } else if (kind === 'estoque') {
+      State.raw.estoque = await parseEstoque(files[0]);
+    } else if (kind === 'produtos') {
+      State.raw.produtos = await parseProdutos(files[0]);
+    } else if (kind === 'ordens') {
+      State.raw.ordens = await parseOrdens(files[0]);
+    } else if (kind === 'devolucoes') {
+      State.raw.devolucoes = await parseDevolucoes(files[0]);
+    }
+    computeItems();
+    populateFilters();
+    render();
+    updateFootStatus();
+    toast(`${kind} carregado com sucesso.`);
+  } catch (e) {
+    console.error(e);
+    toast('Erro ao ler arquivo: ' + e.message, true);
+  }
+}
+
+/* ============== FILTERS ============== */
+function populateFilters() {
+  const empresas = [...new Set(State.items.map(i => i.empresa).filter(Boolean))].sort();
+  const grupos = [...new Set(State.items.map(i => i.grupo).filter(Boolean))].sort();
+  const tams = [...new Set(State.items.map(i => i.tamanho).filter(Boolean))].sort();
+  const arms = [...new Set(State.items.map(i => i.armazenador).filter(Boolean))].sort();
+  const fill = (id, items, allLabel) => {
+    const sel = $(id); const current = sel.value;
+    sel.innerHTML = `<option value="all">${allLabel}</option>` + items.map(i => `<option value="${i}">${i}</option>`).join('');
+    sel.value = items.includes(current) ? current : 'all';
+  };
+  fill('#filter-empresa', empresas, 'Todas as empresas');
+  fill('#filter-grupo', grupos, 'Todas as categorias');
+  fill('#filter-tamanho', tams, 'Todos os tamanhos');
+  fill('#filter-armazenador', arms, 'Todos os locais');
+}
+
+function updateFootStatus() {
+  const total = State.items.length;
+  const snap = State.dataRefDate ? State.dataRefDate.toLocaleDateString('pt-BR') : '—';
+  $('#foot-status').textContent = total ? `${fmtNum(total)} SKUs · Snapshot ${snap}` : 'Sem dados carregados';
+}
+
+/* ============== BOOTSTRAP ============== */
+document.addEventListener('DOMContentLoaded', () => {
+  // Nav
+  $$('aside nav button').forEach(b => b.onclick = () => goto(b.dataset.view));
+  // Filtros
+  const filterIds = {
+    '#filter-periodo': 'periodo', '#filter-empresa':'empresa', '#filter-grupo':'grupo',
+    '#filter-tamanho':'tamanho', '#filter-armazenador':'armazenador'
+  };
+  Object.entries(filterIds).forEach(([sel, key]) => {
+    $(sel).addEventListener('change', (e) => {
+      const v = e.target.value;
+      State.filters[key] = key === 'periodo' ? (v === 'all' ? 'all' : parseInt(v)) : v;
+      render();
+    });
+  });
+  // Render inicial
+  render();
+});
+</script>
+</body>
+</html>
